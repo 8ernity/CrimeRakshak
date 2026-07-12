@@ -38,6 +38,19 @@ class Settings(BaseSettings):
     # Issued-at leeway (seconds) tolerated when validating tokens.
     JWT_LEEWAY_SECONDS: int = 10
 
+    # ── Neo4j (Graph Intelligence) ──
+    # Same variable names as the ingestion pipeline (see backend/ingest.py) so
+    # the API and the loaders talk to the same graph database.
+    NEO4J_URI: str = "bolt://localhost:7687"
+    NEO4J_USER: str = "neo4j"
+    NEO4J_PASSWORD: str = "password"
+    NEO4J_DATABASE: str = "neo4j"
+    # Cap on nodes/edges returned by traversal endpoints (guards huge payloads).
+    GRAPH_MAX_NODES: int = 500
+    GRAPH_DEFAULT_LIMIT: int = 100
+    # Max hops permitted for full-network traversal and path search.
+    GRAPH_MAX_DEPTH: int = 5
+
     # ── Security policy ──
     PASSWORD_MIN_LENGTH: int = 8
     # Wrong-password attempts before an account is temporarily locked.

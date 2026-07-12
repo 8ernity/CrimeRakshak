@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.exceptions import AppHTTPException
 from app.core.logging import get_logger
+from app.graph.routers import graph as graph_router
 from app.routers import admin, auth, protected
 
 logger = get_logger("api")
@@ -68,11 +69,29 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 app.include_router(protected.router, prefix=settings.API_V1_PREFIX)
+app.include_router(graph_router.router, prefix=settings.API_V1_PREFIX)
+
+
+# ── Lifecycle ─────────────────────────────────────────────────────────────
+@app.on_event("shutdown")
+def _shutdown_graph() -> None:
+    """Close the shared Neo4j driver cleanly on application shutdown."""
+    from app.graph.connection import graph_connection
+
+    graph_connection.close()
 
 
 @app.get("/health", tags=["system"], summary="Liveness probe")
 def health():
     return {"status": "ok", "service": settings.PROJECT_NAME}
+
+
+@app.get("/health/graph", tags=["system"], summary="Graph DB connectivity probe")
+def health_graph():
+    from app.graph.connection import graph_connection
+
+    ok = graph_connection.verify_connectivity()
+    return {"status": "ok" if ok else "unavailable", "component": "neo4j"}
 
 
 @app.get("/", tags=["system"], include_in_schema=False)
