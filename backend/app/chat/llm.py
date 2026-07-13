@@ -23,14 +23,20 @@ class LLMConfigError(RuntimeError):
 
 @lru_cache
 def get_client() -> OpenAI:
-    if not settings.OPENROUTER_API_KEY:
-        raise LLMConfigError(
-            "OPENROUTER_API_KEY is not set. Add it to backend/.env."
+    provider = (settings.LLM_PROVIDER or "gemini").lower()
+    if provider == "gemini":
+        if not settings.GEMINI_API_KEY:
+            raise LLMConfigError("GEMINI_API_KEY is not set. Add it to backend/.env.")
+        return OpenAI(
+            base_url=settings.GEMINI_BASE_URL,
+            api_key=settings.GEMINI_API_KEY,
         )
+    # Default: OpenRouter.
+    if not settings.OPENROUTER_API_KEY:
+        raise LLMConfigError("OPENROUTER_API_KEY is not set. Add it to backend/.env.")
     return OpenAI(
         base_url=settings.OPENROUTER_BASE_URL,
         api_key=settings.OPENROUTER_API_KEY,
-        # OpenRouter attribution headers (optional but recommended).
         default_headers={
             "HTTP-Referer": "https://crimerakshak.local",
             "X-Title": "CrimeRakshak",

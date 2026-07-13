@@ -1,0 +1,21 @@
+
+> frontend@0.1.0 dev:lowmem
+> next dev --webpack
+
+▲ Next.js 16.2.10 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.56.1:3000
+- Environments: .env.local
+✓ Ready in 1497ms
+
+ POST /api/chat 200 in 7.7s (next.js: 1952ms, application-code: 5.7s)
+○ Compiling /ai-assistant ...
+ GET /ai-assistant 200 in 15.5s (next.js: 15.0s, application-code: 556ms)
+ POST /api/chat 200 in 3.6s (next.js: 31ms, application-code: 3.6s)
+ POST /api/chat 200 in 3.9s (next.js: 5ms, application-code: 3.9s)
+ POST /api/chat 200 in 2.3s (next.js: 5ms, application-code: 2.3s)
+ POST /api/chat 200 in 6.7s (next.js: 5ms, application-code: 6.7s)
+ POST /api/chat 200 in 4.2s (next.js: 4ms, application-code: 4.2s)
+ GET /ai-assistant 200 in 208ms (next.js: 14ms, application-code: 194ms)
+ POST /api/chat 200 in 2.7s (next.js: 9ms, application-code: 2.7s)
+ POST /api/chat 200 in 3.2s (next.js: 8ms, application-code: 3.2s)

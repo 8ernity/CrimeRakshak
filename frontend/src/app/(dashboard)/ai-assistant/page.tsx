@@ -4,31 +4,68 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { processQuery, examplePrompts, type ChatMessage } from "@/lib/chat-engine";
+import { examplePrompts, type ChatMessage } from "@/lib/chat-engine";
 import { useLanguage } from "@/components/LanguageContext";
 import * as motion from "motion/react-client";
 import { Send, MessageSquare, Sparkles, Bot, User } from "lucide-react";
 
 export default function AIAssistantPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Hello! I'm the CrimeRakshak AI Copilot. Ask me anything about Karnataka crime data. Try one of the suggestions below!", timestamp: new Date() },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const conversationId = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = (query?: string) => {
+  const handleSend = async (query?: string) => {
     const q = query || input.trim();
-    if (!q) return;
+    if (!q || loading) return;
+
     const userMsg: ChatMessage = { role: "user", content: q, timestamp: new Date() };
-    const response = processQuery(q, t);
-    const assistantMsg: ChatMessage = { role: "assistant", content: response, timestamp: new Date() };
-    setMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: q,
+          conversation_id: conversationId.current,
+          // UI language is "EN" | "KA"; backend expects "en" | "kn".
+          language: lang === "KA" ? "kn" : "en",
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
+      }
+
+      conversationId.current = data.conversation_id ?? conversationId.current;
+      let content: string = data.answer ?? "(no answer)";
+      if (Array.isArray(data.sources) && data.sources.length > 0) {
+        content += "\n\n---\n📎 Sources:\n" + data.sources.map((s: string) => `• ${s}`).join("\n");
+      }
+      const assistantMsg: ChatMessage = { role: "assistant", content, timestamp: new Date() };
+      setMessages((prev) => [...prev, assistantMsg]);
+    } catch (err) {
+      const errorMsg: ChatMessage = {
+        role: "assistant",
+        content: `⚠️ Could not reach the AI backend.\n${String(err)}\n\nMake sure the backend is running on http://localhost:8000.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,6 +106,16 @@ export default function AIAssistantPage() {
               )}
             </motion.div>
           ))}
+          {loading && (
+            <div className="flex gap-3 justify-start">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand-purple to-brand-blue flex items-center justify-center flex-shrink-0">
+                <Bot className="h-4 w-4 text-white" />
+              </div>
+              <div className="max-w-[80%] rounded-2xl px-4 py-3 text-sm bg-muted/50 rounded-bl-md text-muted-foreground animate-pulse">
+                {t("Analyzing crime data...")}
+              </div>
+            </div>
+          )}
           <div ref={bottomRef} />
         </CardContent>
 
@@ -98,8 +145,9 @@ export default function AIAssistantPage() {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t("Ask about crime data...")}
               className="flex-1"
+              disabled={loading}
             />
-            <Button type="submit" size="icon" className="bg-gradient-to-r from-brand-purple to-brand-blue" disabled={!input.trim()}>
+            <Button type="submit" size="icon" className="bg-gradient-to-r from-brand-purple to-brand-blue" disabled={!input.trim() || loading}>
               <Send className="h-4 w-4" />
             </Button>
           </form>

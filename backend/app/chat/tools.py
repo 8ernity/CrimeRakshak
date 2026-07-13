@@ -16,6 +16,7 @@ from functools import lru_cache
 from app.chat.data.query import run_query, UnsafeQueryError
 from app.chat.data.schema_card import generate_schema_card
 from app.chat.data.loader import build_database
+from app.chat import decision_tools
 
 
 @lru_cache
@@ -69,11 +70,105 @@ TOOL_SPECS: list[dict] = [
                 "required": ["sql"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "investigation_support",
+            "description": (
+                "Investigation / decision support for a district: an actionable "
+                "briefing combining the district's crime profile, its worst "
+                "crime concerns, and administrative bottlenecks (FIR/chargesheet "
+                "e-sign completion, Sakala pendency) with recommended focus "
+                "areas. Use whenever the user asks for investigation support, "
+                "decision support, recommendations, priorities, what to focus "
+                "on, or an action plan for a district."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"district": {"type": "string"}},
+                "required": ["district"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "district_review_summary",
+            "description": (
+                "Decision support (real aggregate stats): summarise a district's "
+                "crime profile — total reported cases and its worst crime types, "
+                "ranked. Use for 'crime review for <district>' or 'what are the "
+                "top crimes in <district>'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "district": {"type": "string"},
+                    "top_n": {"type": "integer", "description": "How many top crime types (default 6)."},
+                },
+                "required": ["district"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rising_crimes",
+            "description": (
+                "Decision support (real aggregate stats): the crime heads with "
+                "the largest year-over-year increase (January 2026 vs January "
+                "2025) at state level. Use for 'which crimes are rising / "
+                "increasing / emerging'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"top_n": {"type": "integer", "description": "How many (default 8)."}},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "crime_trend",
+            "description": (
+                "Decision support (real aggregate stats): the trend for a crime "
+                "head across January 2025, December 2025 and January 2026. Use "
+                "for 'trend of murder' or 'how has <crime> changed'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"crime_head": {"type": "string"}},
+                "required": ["crime_head"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "disposal_analysis",
+            "description": (
+                "Decision support (real aggregate stats): FIR and chargesheet "
+                "e-sign completion and Sakala service pendency for a police "
+                "unit/district. Use for 'FIR e-sign status', 'chargesheet "
+                "pendency', or 'disposal performance of <unit>'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"unit": {"type": "string"}},
+                "required": ["unit"],
+            },
+        },
+    },
 ]
 
 TOOL_IMPLS = {
     "query_crime_stats": _tool_query_crime_stats,
+    "investigation_support": decision_tools.investigation_support,
+    "district_review_summary": decision_tools.district_review_summary,
+    "rising_crimes": decision_tools.rising_crimes,
+    "crime_trend": decision_tools.crime_trend,
+    "disposal_analysis": decision_tools.disposal_analysis,
 }
 
 
@@ -88,8 +183,11 @@ def dispatch_tool(name: str, arguments: str) -> tuple[dict, list[str]]:
         return {"error": "Malformed tool arguments."}, []
 
     result = impl(**args)
-    # Provenance: the SQL that produced grounded numbers.
+    # Provenance for Block 9 explainability.
     sources: list[str] = []
-    if isinstance(result, dict) and result.get("sql"):
-        sources.append(f"crime-stats SQL: {result['sql']}")
+    if isinstance(result, dict):
+        if result.get("sql"):
+            sources.append(f"crime-stats SQL: {result['sql']}")
+        for ref in result.get("_source", []) or []:
+            sources.append(ref)
     return result, sources

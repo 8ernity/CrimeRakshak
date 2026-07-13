@@ -4,3 +4,6 @@
 
 # DuckDB build artifact (rebuild via python -m app.chat.data.loader)
 *.duckdb
+
+# Generated conversation PDFs
+backend/exports/

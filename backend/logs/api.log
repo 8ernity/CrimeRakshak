@@ -52,3 +52,167 @@
 2026-07-13 21:17:45,335 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
 2026-07-13 21:17:45,351 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
 2026-07-13 21:17:45,366 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 21:36:07,076 - graph.connection - INFO - Neo4j driver initialized for bolt://localhost:7687
+2026-07-13 21:36:11,174 - graph.connection - WARNING - Neo4j connectivity check failed: Couldn't connect to localhost:7687 (resolved to ()):
+Failed to establish connection to ResolvedIPv6Address(('::1', 7687, 0, 0)) (reason [WinError 10061] No connection could be made because the target machine actively refused it)
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [WinError 10061] No connection could be made because the target machine actively refused it)
+2026-07-13 21:36:31,197 - graph.connection - INFO - Neo4j driver initialized for bolt://localhost:7687
+2026-07-13 21:39:36,264 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 21:39:36,291 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 21:39:36,302 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 21:39:36,315 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 21:39:36,326 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 21:39:36,337 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 21:39:36,347 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 21:39:36,357 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 21:39:36,366 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 21:55:51,095 - chat.pdf - INFO - exported conversation demo-123 -> exports\conversation_demo-123.pdf
+2026-07-13 22:02:09,274 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:02:09,362 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:02:09,401 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:02:09,423 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:02:09,441 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:02:09,476 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:02:09,514 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:02:09,531 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:02:09,567 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:05:32,850 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:05:32,890 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:05:32,905 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:05:32,922 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:05:32,939 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:05:32,953 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:05:32,963 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:05:32,974 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:05:32,984 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:06:39,251 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:06:39,287 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:06:39,301 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:06:39,319 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:06:39,336 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:06:39,347 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:06:39,358 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:06:39,367 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:06:39,380 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:07:20,877 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:07:20,914 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:07:20,927 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:07:20,939 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:07:20,953 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:07:20,965 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:07:20,980 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:07:20,997 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:07:21,008 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:08:42,351 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:08:42,383 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:08:42,400 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:08:42,413 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:08:42,423 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:08:42,435 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:08:42,446 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:08:42,459 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:08:42,471 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:35:47,315 - seed - INFO - Created permission: graph:read
+2026-07-13 22:35:47,317 - seed - INFO - Created permission: graph:write
+2026-07-13 22:35:47,318 - seed - INFO - Created permission: financial:read
+2026-07-13 22:35:47,320 - seed - INFO - Created permission: financial:write
+2026-07-13 22:35:47,321 - seed - INFO - Created permission: audit:read
+2026-07-13 22:35:47,322 - seed - INFO - Created permission: users:read
+2026-07-13 22:35:47,323 - seed - INFO - Created permission: rbac:manage
+2026-07-13 22:35:47,329 - seed - INFO - Created role: admin
+2026-07-13 22:35:47,331 - seed - INFO - Created role: analyst
+2026-07-13 22:35:47,332 - seed - INFO - Created role: officer
+2026-07-13 22:35:47,333 - seed - INFO - Created role: viewer
+2026-07-13 22:35:47,677 - seed - INFO - Created initial superuser: admin
+2026-07-13 22:35:47,678 - seed - INFO - Seeding complete.
+2026-07-13 22:36:17,372 - seed - INFO - Superuser 'admin' already exists; skipping.
+2026-07-13 22:36:17,373 - seed - INFO - Seeding complete.
+2026-07-13 22:41:06,488 - __main__ - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:41:06,526 - __main__ - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:41:06,538 - __main__ - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:41:06,551 - __main__ - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:41:06,564 - __main__ - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:41:06,580 - __main__ - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:41:06,599 - __main__ - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:41:06,616 - __main__ - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:41:06,629 - __main__ - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:41:10,482 - seed - INFO - Superuser 'admin' already exists; skipping.
+2026-07-13 22:41:10,483 - seed - INFO - Seeding complete.
+2026-07-13 22:58:11,063 - __main__ - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 22:58:11,099 - __main__ - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 22:58:11,111 - __main__ - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 22:58:11,124 - __main__ - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 22:58:11,135 - __main__ - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 22:58:11,146 - __main__ - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 22:58:11,156 - __main__ - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 22:58:11,166 - __main__ - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 22:58:11,176 - __main__ - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 22:59:49,338 - graph.connection - INFO - Neo4j driver initialized for bolt://localhost:7687
+2026-07-13 23:00:19,637 - graph.connection - WARNING - Neo4j connectivity check failed: Couldn't connect to localhost:7687 (resolved to ()):
+Failed to read any data from server ResolvedIPv6Address(('::1', 7687, 0, 0)) after connected (deadline Deadline(timeout=30))
+Failed to read any data from server ResolvedIPv4Address(('127.0.0.1', 7687)) after connected (deadline Deadline(timeout=30))
+2026-07-13 23:53:02,693 - __main__ - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 23:53:02,776 - __main__ - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 23:53:02,812 - __main__ - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 23:53:02,861 - __main__ - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 23:53:02,893 - __main__ - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 23:53:02,923 - __main__ - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 23:53:02,958 - __main__ - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 23:53:02,986 - __main__ - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 23:53:03,019 - __main__ - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 23:54:30,033 - __main__ - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 23:54:30,095 - __main__ - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 23:54:30,109 - __main__ - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 23:54:30,126 - __main__ - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 23:54:30,147 - __main__ - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 23:54:30,170 - __main__ - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 23:54:30,190 - __main__ - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 23:54:30,210 - __main__ - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 23:54:30,230 - __main__ - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-13 23:59:41,328 - __main__ - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-13 23:59:41,371 - __main__ - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-13 23:59:41,387 - __main__ - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-13 23:59:41,409 - __main__ - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-13 23:59:41,426 - __main__ - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-13 23:59:41,442 - __main__ - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-13 23:59:41,465 - __main__ - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-13 23:59:41,482 - __main__ - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-13 23:59:41,496 - __main__ - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-14 00:13:03,587 - chat.api - INFO - chat turn user=admin conv=2b48c677-cefa-4681-ba42-dd91f250102e lang=en
+2026-07-14 00:13:03,786 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-14 00:13:03,836 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-14 00:13:03,851 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-14 00:13:03,866 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-14 00:13:03,880 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-14 00:13:03,894 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-14 00:13:03,911 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-14 00:13:03,931 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-14 00:13:03,959 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-14 00:14:33,676 - chat.api - INFO - chat turn user=admin conv=fd50466d-7ddc-46f8-b868-2280f8f53744 lang=en
+2026-07-14 00:16:47,960 - chat.api - INFO - chat turn user=admin conv=f7109903-0afb-4349-b703-4f362608c79b lang=en
+2026-07-14 00:17:11,454 - chat.api - INFO - chat turn user=admin conv=63f8a212-2c1b-40e9-8400-d518da2fef12 lang=en
+2026-07-14 00:17:12,510 - graph.connection - INFO - Neo4j driver initialized for bolt://localhost:7687
+2026-07-14 00:17:12,777 - graph.connection - ERROR - Neo4j query error: {code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.}
+2026-07-14 00:17:12,792 - graph.connection - ERROR - Neo4j query error: {code: Neo.ClientError.Security.Unauthorized} {message: The client is unauthorized due to authentication failure.}
+2026-07-14 00:22:56,354 - chat.api - INFO - chat turn user=admin conv=90f148ec-a718-42ee-8ffd-6105512cb95c lang=en
+2026-07-14 00:22:56,412 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-14 00:22:56,445 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-14 00:22:56,459 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-14 00:22:56,474 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-14 00:22:56,488 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-14 00:22:56,504 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-14 00:22:56,517 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-14 00:22:56,531 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-14 00:22:56,543 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-14 00:23:57,306 - chat.api - INFO - chat turn user=admin conv=4c3084b7-2e49-4c7b-aeee-1ac2d75b41bd lang=en
+2026-07-14 00:23:57,364 - app.chat.data.loader - INFO - Loaded 02_district_wise_reported_cases.csv -> table district_crime_matrix (39 rows)
+2026-07-14 00:23:57,403 - app.chat.data.loader - INFO - Loaded district_wise_major_heads_yearly.csv -> table district_major_heads_yearly (49 rows)
+2026-07-14 00:23:57,420 - app.chat.data.loader - INFO - Loaded 01_crime_review_summary.csv -> table crime_review_summary (28 rows)
+2026-07-14 00:23:57,437 - app.chat.data.loader - INFO - Loaded 09_crime_against_women.csv -> table crimes_against_women (24 rows)
+2026-07-14 00:23:57,454 - app.chat.data.loader - INFO - Loaded 10_crime_against_children.csv -> table crimes_against_children (21 rows)
+2026-07-14 00:23:57,470 - app.chat.data.loader - INFO - Loaded 11_crime_against_sc_st.csv -> table crimes_against_sc_st (6 rows)
+2026-07-14 00:23:57,484 - app.chat.data.loader - INFO - Loaded 04_sakala_district_receipts_disposals.csv -> table sakala_disposals (38 rows)
+2026-07-14 00:23:57,499 - app.chat.data.loader - INFO - Loaded 06_esign_fir_jan2026.csv -> table esign_fir (39 rows)
+2026-07-14 00:23:57,513 - app.chat.data.loader - INFO - Loaded 07_esign_chargesheet_jan2026.csv -> table esign_chargesheet (39 rows)
+2026-07-14 00:24:27,566 - chat.api - INFO - chat turn user=admin conv=14c67b9a-7ebd-4e8b-8e65-2b9df324d2db lang=en
+2026-07-14 00:24:54,053 - chat.api - INFO - chat turn user=admin conv=14c67b9a-7ebd-4e8b-8e65-2b9df324d2db lang=en

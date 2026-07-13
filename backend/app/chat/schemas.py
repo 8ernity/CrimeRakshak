@@ -11,10 +11,14 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[str] = Field(
         None, description="Omit to start a new conversation; pass to continue one."
     )
+    language: Optional[str] = Field(
+        "en", description="Response language: 'en' (English) or 'kn' (Kannada)."
+    )
 
 
 class ChatResponse(BaseModel):
     conversation_id: str
     answer: str
+    language: str = "en"
     sources: List[str] = Field(default_factory=list, description="Grounding provenance (SQL/tools used).")
     tool_calls: int = 0

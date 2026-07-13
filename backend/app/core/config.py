@@ -52,14 +52,22 @@ class Settings(BaseSettings):
     # Max hops permitted for full-network traversal and path search.
     GRAPH_MAX_DEPTH: int = 5
 
-    # ── LLM (OpenRouter) ──
-    # OpenRouter exposes an OpenAI-compatible API. Key comes from the env only.
+    # ── LLM provider ──
+    # "gemini" (Google Generative Language, OpenAI-compat) or "openrouter".
+    LLM_PROVIDER: str = "gemini"
+
+    # OpenRouter (used when LLM_PROVIDER == "openrouter").
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+
+    # Google Gemini (used when LLM_PROVIDER == "gemini").
+    GEMINI_API_KEY: str = ""
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
     # Model used for tool-calling / reasoning (agent core).
-    LLM_AGENT_MODEL: str = "anthropic/claude-sonnet-4.6"
+    LLM_AGENT_MODEL: str = "gemini-flash-lite-latest"
     # Model used for fluent answer/summary generation (Kannada-capable).
-    LLM_SUMMARY_MODEL: str = "google/gemini-2.5-flash"
+    LLM_SUMMARY_MODEL: str = "gemini-flash-lite-latest"
     # Cap on output tokens per call (keeps cost bounded on metered accounts).
     LLM_MAX_TOKENS: int = 1024
 
