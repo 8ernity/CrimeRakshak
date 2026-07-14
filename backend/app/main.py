@@ -10,6 +10,7 @@ Crime routers are intentionally out of scope for this step; their protected
 placeholders live in ``app/routers/protected.py``.
 """
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -60,7 +61,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": {
                 "code": "validation_error",
                 "message": "request validation failed",
-                "details": exc.errors(),
+                # jsonable_encoder: error dicts may embed non-JSON-serializable
+                # values (e.g. the raw ``bytes`` body when a form-encoded payload
+                # is sent to a JSON endpoint) — plain exc.errors() would make
+                # JSONResponse raise and turn this 422 into a 500.
+                "details": jsonable_encoder(exc.errors()),
             }
         },
     )
