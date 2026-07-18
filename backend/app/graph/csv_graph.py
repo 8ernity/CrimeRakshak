@@ -312,3 +312,240 @@ def get_all_edges_flat(limit: int = 800) -> list[dict]:
          "type": e["type"], "properties": e["properties"]}
         for e in g.edges[:limit]
     ]
+
+
+# ---------------------------------------------------------------------------
+# FIR-level case intelligence (backs /graph/firs/list, /graph/fir/{id} and
+# the chat case tools when Neo4j is unavailable or holds no such FIR).
+# ---------------------------------------------------------------------------
+
+def _node_out(n: dict) -> dict:
+    return {"id": n["id"], "label": n["label"], "properties": n["properties"]}
+
+
+def _fir_people(g: _Graph, fir_id: str) -> tuple[list[dict], list[dict]]:
+    """(accused_nodes, victim_nodes) for one FIR via INVOLVED_IN edges."""
+    accused, victims = [], []
+    for e in g.edges:
+        if e["type"] == "INVOLVED_IN" and e["target"] == fir_id:
+            person = g.nodes.get(e["source"])
+            if not person:
+                continue
+            role = e["properties"].get("role")
+            if role == "accused":
+                accused.append(person)
+            elif role == "victim":
+                victims.append(person)
+    return accused, victims
+
+
+def _person_firs(g: _Graph, person_id: str, role: str = "accused") -> list[str]:
+    """FIR ids a person is involved in with the given role."""
+    return [
+        e["target"] for e in g.edges
+        if e["type"] == "INVOLVED_IN" and e["source"] == person_id
+        and e["properties"].get("role") == role
+    ]
+
+
+def has_fir(fir_id: str) -> bool:
+    g = _get_graph()
+    n = g.nodes.get(fir_id)
+    return bool(n and n["label"] == "FIR")
+
+
+def list_firs(limit: int = 100) -> list[dict]:
+    """All FIRs, newest first — shape matches GraphService.list_firs()."""
+    g = _get_graph()
+    firs = [n for n in g.nodes.values() if n["label"] == "FIR"]
+    firs.sort(key=lambda n: n["properties"].get("date", ""), reverse=True)
+    return [
+        {
+            "fir_id": n["id"],
+            "crime_type": n["properties"].get("crime_type"),
+            "sections": n["properties"].get("sections"),
+            "status": n["properties"].get("status"),
+            "date": n["properties"].get("date"),
+            "modus_operandi": n["properties"].get("modus_operandi"),
+            "district": n["properties"].get("district"),
+        }
+        for n in firs[:limit]
+    ]
+
+
+def get_fir_profile(fir_id: str) -> dict | None:
+    """FIRProfile-shaped dict, or None if the FIR is not in the CSV graph."""
+    g = _get_graph()
+    fir = g.nodes.get(fir_id)
+    if not fir or fir["label"] != "FIR":
+        return None
+
+    accused, victims = _fir_people(g, fir_id)
+    props = fir["properties"]
+
+    crime_type = props.get("crime_type") or "Unknown"
+    crimes = [{
+        "id": f"CRIME-{crime_type.upper().replace(' ', '_')}",
+        "label": "CrimeCategory",
+        "properties": {"name": crime_type, "sections": props.get("sections", "")},
+    }]
+
+    district = props.get("district", "Unknown")
+    loc_id = f"LOC-{district.upper().replace(' ', '_')}"
+    locations = []
+    if loc_id in g.nodes:
+        locations.append(_node_out(g.nodes[loc_id]))
+
+    graph_nodes = [_node_out(fir)] + [_node_out(p) for p in accused + victims] + locations
+    graph_edges = [
+        {"source": p["id"], "target": fir_id, "type": "INVOLVED_IN",
+         "properties": {"role": "accused" if p in accused else "victim"}}
+        for p in accused + victims
+    ]
+    if locations:
+        graph_edges.append({"source": fir_id, "target": loc_id,
+                            "type": "IN_DISTRICT", "properties": {}})
+
+    return {
+        "fir": _node_out(fir),
+        "accused": [_node_out(p) for p in accused],
+        "victims": [_node_out(p) for p in victims],
+        "witnesses": [],
+        "crimes": crimes,
+        "locations": locations,
+        "graph": {
+            "nodes": graph_nodes,
+            "edges": graph_edges,
+            "node_count": len(graph_nodes),
+            "edge_count": len(graph_edges),
+            "truncated": False,
+        },
+    }
+
+
+def get_fir_timeline(fir_id: str) -> dict | None:
+    """Investigation timeline: registration + accused's other cases, sorted."""
+    g = _get_graph()
+    fir = g.nodes.get(fir_id)
+    if not fir or fir["label"] != "FIR":
+        return None
+
+    props = fir["properties"]
+    events = [{
+        "date": props.get("date"),
+        "event": f"FIR {fir_id} registered — {props.get('crime_type', 'Unknown')} in {props.get('district', 'Unknown')}",
+    }]
+
+    accused, _ = _fir_people(g, fir_id)
+    for p in accused:
+        for other_id in _person_firs(g, p["id"]):
+            if other_id == fir_id:
+                continue
+            other = g.nodes.get(other_id)
+            if not other:
+                continue
+            events.append({
+                "date": other["properties"].get("date"),
+                "event": (
+                    f"Accused {p['properties'].get('name', p['id'])} also linked to "
+                    f"{other_id} ({other['properties'].get('crime_type', 'Unknown')})"
+                ),
+            })
+
+    status = props.get("status", "")
+    if status and status != "under-investigation":
+        events.append({"date": props.get("date"), "event": f"Case status: {status}"})
+
+    events.sort(key=lambda e: (e.get("date") is None, e.get("date") or ""))
+    return {
+        "fir_id": fir_id,
+        "timeline": events,
+        "_source": [f"case-csv: timeline for {fir_id} (registration + accused prior cases)"],
+    }
+
+
+def get_similar_cases(fir_id: str, limit: int = 10) -> dict | None:
+    """Rank other FIRs by shared accused (strong) and same crime type in the
+    same district (weak)."""
+    g = _get_graph()
+    fir = g.nodes.get(fir_id)
+    if not fir or fir["label"] != "FIR":
+        return None
+
+    props = fir["properties"]
+    accused, _ = _fir_people(g, fir_id)
+
+    scored: dict[str, dict] = {}
+
+    def bump(fid: str, reason: str, score: int) -> None:
+        entry = scored.setdefault(fid, {"fir_id": fid, "reasons": [], "score": 0})
+        if reason not in entry["reasons"]:
+            entry["reasons"].append(reason)
+            entry["score"] += score
+
+    # 1) FIRs sharing an accused person (strongest signal).
+    for p in accused:
+        name = p["properties"].get("name", p["id"])
+        for other_id in _person_firs(g, p["id"]):
+            if other_id != fir_id:
+                bump(other_id, f"shares accused {name}", 2)
+
+    # 2) Same crime type in the same district.
+    for n in g.nodes.values():
+        if n["label"] != "FIR" or n["id"] == fir_id:
+            continue
+        op = n["properties"]
+        if (op.get("crime_type") == props.get("crime_type")
+                and op.get("district") == props.get("district")):
+            bump(n["id"], f"same crime type ({props.get('crime_type')}) in {props.get('district')}", 1)
+
+    ranked = sorted(scored.values(), key=lambda x: x["score"], reverse=True)[:limit]
+    return {
+        "fir_id": fir_id,
+        "similar_cases": ranked,
+        "_source": [f"case-csv: similar cases to {fir_id} (shared accused / crime type + district)"],
+    }
+
+
+def get_fir_leads(fir_id: str) -> dict | None:
+    """Investigative leads: co-accused of this FIR's accused from other cases
+    who are not named in this FIR."""
+    g = _get_graph()
+    fir = g.nodes.get(fir_id)
+    if not fir or fir["label"] != "FIR":
+        return None
+
+    accused, _ = _fir_people(g, fir_id)
+    named_here = {p["id"] for p in accused}
+
+    leads: list[dict] = []
+    seen: set[str] = set()
+    for p in accused:
+        name = p["properties"].get("name", p["id"])
+        for other_fir in _person_firs(g, p["id"]):
+            if other_fir == fir_id:
+                continue
+            other_accused, _ = _fir_people(g, other_fir)
+            for cand in other_accused:
+                if cand["id"] in named_here or cand["id"] in seen:
+                    continue
+                seen.add(cand["id"])
+                other_props = g.nodes[other_fir]["properties"]
+                leads.append({
+                    "lead": cand["properties"].get("name", cand["id"]),
+                    "lead_id": cand["id"],
+                    "rationale": (
+                        f"co-accused with {name} in {other_fir} "
+                        f"({other_props.get('crime_type', 'Unknown')}), not yet named in this FIR"
+                    ),
+                })
+    leads = leads[:25]
+    if not leads:
+        return {"fir_id": fir_id, "leads": [],
+                "note": "no co-offending associates found in other cases",
+                "_source": [f"case-csv: lead analysis for {fir_id}"]}
+    return {
+        "fir_id": fir_id,
+        "leads": leads,
+        "_source": [f"case-csv: lead analysis for {fir_id} (co-accused in other cases)"],
+    }

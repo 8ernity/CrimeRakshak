@@ -12,17 +12,20 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 
 from app.chat.agent import run_agent
 from app.chat.pdf import export_conversation
 from app.chat.schemas import ChatRequest, ChatResponse
 from app.chat.translate import from_english, normalize_language, to_english
-from app.core.dependencies import get_current_active_user
+from app.core.database import get_db
+from app.core.dependencies import get_client_ip, get_current_active_user
 from app.core.exceptions import AppHTTPException
 from app.core.logging import get_logger
 from app.models.rbac import User
+from app.services import audit
 
 logger = get_logger("chat.api")
 
@@ -35,7 +38,12 @@ _HISTORY_WINDOW = 20
 
 
 @router.post("", response_model=ChatResponse, summary="Ask the crime-intelligence assistant")
-def chat(payload: ChatRequest, current_user: User = Depends(get_current_active_user)) -> ChatResponse:
+def chat(
+    payload: ChatRequest,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> ChatResponse:
     conversation_id = payload.conversation_id or str(uuid.uuid4())
     language = normalize_language(payload.language)
 
@@ -55,12 +63,30 @@ def chat(payload: ChatRequest, current_user: User = Depends(get_current_active_u
         {"role": "assistant", "text": answer, "sources": turn.sources, "language": language}
     )
 
+    # Accountability: every AI answer is written to the persistent audit trail
+    # with its full tool/SQL provenance (best-effort, never breaks the request).
+    audit.record(
+        db,
+        action="chat.answer",
+        user_id=current_user.user_id,
+        resource=f"conversation:{conversation_id}",
+        ip_address=get_client_ip(request),
+        detail={
+            "question": payload.message[:500],
+            "language": language,
+            "tool_calls": turn.tool_calls,
+            "trace": turn.trace,
+            "sources": turn.sources,
+        },
+    )
+
     return ChatResponse(
         conversation_id=conversation_id,
         answer=answer,
         language=language,
         sources=turn.sources,
         tool_calls=turn.tool_calls,
+        trace=turn.trace,
     )
 
 

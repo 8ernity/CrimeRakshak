@@ -84,7 +84,8 @@ export default function AIPredictionPage() {
       let logIndex = 0;
       interval = setInterval(() => {
         if (logIndex < simLogs.length) {
-          setLogs(prev => [...prev, simLogs[logIndex]]);
+          const currentLog = simLogs[logIndex];
+          setLogs(prev => [...prev, currentLog]);
           logIndex++;
         }
       }, 150);
@@ -356,7 +357,7 @@ export default function AIPredictionPage() {
                     {logs.map((log, index) => (
                       <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-3 text-brand-teal/80">
                         <span className="text-muted-foreground/50 opacity-50">[{new Date().toISOString().split('T')[1].substring(0,8)}]</span>
-                        <span className={log.includes("ERROR") ? "text-brand-red" : log.includes("COMPLETE") ? "text-brand-purple font-bold" : ""}>{log}</span>
+                        <span className={log?.includes("ERROR") ? "text-brand-red" : log?.includes("COMPLETE") ? "text-brand-purple font-bold" : ""}>{log}</span>
                       </motion.div>
                     ))}
                     <div className="flex items-center gap-2 text-brand-purple mt-4">

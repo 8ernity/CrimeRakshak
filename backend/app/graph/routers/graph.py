@@ -154,9 +154,17 @@ def get_fir(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
+    def _profile():
+        # Primary: rich CSV case graph (1200 synthetic FIRs with narrative).
+        from app.graph import csv_graph
+        profile = csv_graph.get_fir_profile(fir_id)
+        if profile is not None:
+            return profile
+        # Fallback: Neo4j (externally ingested FIRs).
+        return service.get_fir_profile(fir_id)
+
     return _guard(
-        db, request, current_user, "graph.fir", f"FIR:{fir_id}",
-        lambda: service.get_fir_profile(fir_id),
+        db, request, current_user, "graph.fir", f"FIR:{fir_id}", _profile,
     )
 
 
@@ -267,3 +275,84 @@ def get_path(
             source_label, source_id, target_label, target_id, max_depth
         ),
     )
+
+
+# ── GET /graph/firs/list ───────────────────────────────────────────────────
+@router.get(
+    "/firs/list",
+    summary="List all FIRs in the system",
+)
+def list_firs(
+    request: Request,
+    limit: int = Query(100, ge=1, le=500),
+    service: GraphService = Depends(get_graph_service),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    def _list():
+        # Primary: rich CSV case graph (has crime_type, modus_operandi, district).
+        from app.graph import csv_graph
+        rows = csv_graph.list_firs(limit)
+        if rows:
+            return rows
+        # Fallback: Neo4j.
+        return service.list_firs(limit)
+
+    return _guard(
+        db, request, current_user, "graph.list_firs", None, _list,
+    )
+
+
+# ── GET /graph/fir/{fir_id}/timeline ──────────────────────────────────────
+@router.get(
+    "/fir/{fir_id}/timeline",
+    summary="Get investigation timeline for an FIR",
+)
+def get_fir_timeline(
+    fir_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    from app.chat.graph_tools import investigation_timeline
+    return _guard(
+        db, request, current_user, "graph.fir_timeline", f"FIR:{fir_id}",
+        lambda: investigation_timeline(fir_id),
+    )
+
+
+# ── GET /graph/fir/{fir_id}/similar ────────────────────────────────────────
+@router.get(
+    "/fir/{fir_id}/similar",
+    summary="Get similar past cases for an FIR",
+)
+def get_fir_similar(
+    fir_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    from app.chat.graph_tools import similar_cases
+    return _guard(
+        db, request, current_user, "graph.fir_similar", f"FIR:{fir_id}",
+        lambda: similar_cases(fir_id),
+    )
+
+
+# ── GET /graph/fir/{fir_id}/leads ──────────────────────────────────────────
+@router.get(
+    "/fir/{fir_id}/leads",
+    summary="Get recommended leads for an FIR",
+)
+def get_fir_leads(
+    fir_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    from app.chat.graph_tools import suggest_leads
+    return _guard(
+        db, request, current_user, "graph.fir_leads", f"FIR:{fir_id}",
+        lambda: suggest_leads(fir_id),
+    )
+

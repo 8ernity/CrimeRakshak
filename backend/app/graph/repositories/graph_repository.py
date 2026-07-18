@@ -187,3 +187,19 @@ class GraphRepository:
             params["label"] = label
             return self._conn.run_read(cypher.SEARCH_BY_LABEL, params)
         return self._conn.run_read(cypher.SEARCH_ANY, params)
+
+    def list_firs(self, limit: int = 100) -> list[dict[str, Any]]:
+        query = """
+        MATCH (f:FIR)
+        RETURN f.fir_id AS fir_id,
+               f.crime_type AS crime_type,
+               f.sections AS sections,
+               f.status AS status,
+               f.date AS date,
+               f.modus_operandi AS modus_operandi,
+               f.district AS district
+        ORDER BY f.date DESC
+        LIMIT $limit
+        """
+        return self._conn.run_read(query, {"limit": limit})
+

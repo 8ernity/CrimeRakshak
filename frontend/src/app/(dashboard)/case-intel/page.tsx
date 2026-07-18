@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as motion from "motion/react-client";
@@ -13,6 +13,7 @@ import {
 import { brandColors } from "@/lib/design-tokens";
 import { cases, type CaseRecord } from "@/data/intelligenceData";
 import { useLanguage } from "@/components/LanguageContext";
+import { fetchAPI } from "@/lib/apiClient";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   "under-investigation": { label: "Under Investigation", color: "text-brand-amber bg-brand-amber/10 border-brand-amber/30", icon: Clock },
@@ -43,8 +44,89 @@ function EvidenceIcon({ type }: { type: string }) {
 
 function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
   const { t } = useLanguage();
-  const st = statusConfig[c.status];
-  const pr = priorityConfig[c.priority || "medium"];
+  const [liveCase, setLiveCase] = useState<CaseRecord>(c);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+
+    Promise.all([
+      fetchAPI(`/graph/fir/${c.firNumber}`).catch(() => null),
+      fetchAPI(`/graph/fir/${c.firNumber}/timeline`).catch(() => null),
+      fetchAPI(`/graph/fir/${c.firNumber}/similar`).catch(() => null),
+      fetchAPI(`/graph/fir/${c.firNumber}/leads`).catch(() => null)
+    ])
+      .then(([firProfile, timelineData, similarData, leadsData]) => {
+        if (!mounted) return;
+
+        let accusedList = c.accused;
+        let victimVal = c.victim;
+        let witnessCountVal = c.witnessCount || 0;
+        let summaryVal = c.summary;
+        let timelineList = c.timeline;
+        let leadsList = c.leads;
+        let similarList = c.similarCases;
+
+        if (firProfile && !firProfile.error) {
+          if (firProfile.accused) {
+            accusedList = firProfile.accused.map((a: any) => a.properties?.name || a.id);
+          }
+          if (firProfile.victims) {
+            victimVal = firProfile.victims.map((v: any) => v.properties?.name || v.id).join(", ");
+          }
+          if (firProfile.witnesses) {
+            witnessCountVal = firProfile.witnesses.length;
+          }
+          if (firProfile.fir?.properties?.modus_operandi) {
+            summaryVal = firProfile.fir.properties.modus_operandi;
+          }
+        }
+
+        if (timelineData && !timelineData.error && timelineData.timeline) {
+          timelineList = timelineData.timeline.map((ev: any) => ({
+            date: ev.date || "",
+            event: ev.event,
+          }));
+        }
+
+        if (leadsData && !leadsData.error && leadsData.leads) {
+          leadsList = leadsData.leads.map((l: any) => `${l.lead}: ${l.rationale}`);
+        }
+
+        if (similarData && !similarData.error && similarData.similar_cases) {
+          similarList = similarData.similar_cases.map((s: any) => ({
+            firNumber: s.fir_id,
+            crimeType: s.reasons.join(", "),
+            relation: `Match Score: ${s.score}`,
+          }));
+        }
+
+        setLiveCase({
+          ...c,
+          accused: accusedList.length > 0 ? accusedList : c.accused,
+          victim: victimVal || c.victim,
+          witnessCount: witnessCountVal,
+          summary: summaryVal || c.summary,
+          timeline: timelineList.length > 0 ? timelineList : c.timeline,
+          leads: leadsList.length > 0 ? leadsList : c.leads,
+          similarCases: similarList.length > 0 ? similarList : c.similarCases,
+          solvabilityScore: Math.min(98, 40 + (witnessCountVal * 10) + (accusedList.length * 10)),
+        });
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch live case details:", err);
+        setIsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [c.firNumber]);
+
+  const st = statusConfig[liveCase.status] || statusConfig["under-investigation"];
+  const pr = priorityConfig[liveCase.priority || "medium"];
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -63,19 +145,19 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
               {/* Left Info */}
               <div className="flex-1 min-w-0 z-10">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground tracking-tight font-mono">{c.firNumber}</h1>
+                  <h1 className="text-2xl md:text-3xl font-heading font-bold text-foreground tracking-tight font-mono">{liveCase.firNumber}</h1>
                   <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded border ${pr.color}`}>
                     {t(pr.label)} {t("Priority")}
                   </span>
                 </div>
-                <p className="text-lg text-foreground/90 font-semibold mb-4">{t(c.crimeType)}</p>
+                <p className="text-lg text-foreground/90 font-semibold mb-4">{t(liveCase.crimeType)}</p>
                 <div className="flex gap-2 flex-wrap">
                   <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded border ${st.color}`}>
                     {t(st.label)}
                   </span>
-                  <span className="text-xs font-semibold text-muted-foreground bg-muted/20 px-2.5 py-1 rounded border border-border/50">{t("Section:")} {c.section}</span>
+                  <span className="text-xs font-semibold text-muted-foreground bg-muted/20 px-2.5 py-1 rounded border border-border/50">{t("Section:")} {liveCase.section}</span>
                   <span className="text-xs font-semibold text-muted-foreground bg-muted/20 px-2.5 py-1 rounded border border-border/50 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {t(c.location)}
+                    <MapPin className="h-3 w-3" /> {t(liveCase.location)}
                   </span>
                 </div>
               </div>
@@ -85,18 +167,22 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
                 <div className="flex justify-between items-end mb-2">
                   <div className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-brand-teal" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("AI Solvability")}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {isLoading ? t("AI ANALYSING...") : t("AI Solvability")}
+                    </span>
                   </div>
-                  <span className="text-3xl font-bold text-foreground leading-none">{c.solvabilityScore || 0}%</span>
+                  <span className="text-3xl font-bold text-foreground leading-none">
+                    {isLoading ? "..." : `${liveCase.solvabilityScore || 0}%`}
+                  </span>
                 </div>
                 <div className="w-full h-3 bg-muted/30 rounded-full overflow-hidden mt-3 relative">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${c.solvabilityScore || 0}%` }}
+                    animate={{ width: `${liveCase.solvabilityScore || 0}%` }}
                     transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
                     className="absolute inset-y-0 left-0 rounded-full"
                     style={{
-                      background: `linear-gradient(to right, ${brandColors.teal}, ${(c.solvabilityScore || 0) >= 80 ? brandColors.green : (c.solvabilityScore || 0) >= 50 ? brandColors.amber : brandColors.customRed})`
+                      background: `linear-gradient(to right, ${brandColors.teal}, ${(liveCase.solvabilityScore || 0) >= 80 ? brandColors.green : (liveCase.solvabilityScore || 0) >= 50 ? brandColors.amber : brandColors.customRed})`
                     }}
                   />
                 </div>
@@ -109,12 +195,12 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
       {/* KPI Row (EXPANDED) */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: t("Date Filed"), value: c.date, icon: Calendar, color: "brand-blue" },
-          { label: t("IO Assigned"), value: c.investigatingOfficer || t("Unassigned"), icon: Users, color: "brand-purple" },
-          { label: t("Total Accused"), value: c.accused.length, icon: Users, color: "brand-red" },
-          { label: t("Witnesses"), value: c.witnessCount || 0, icon: Users, color: "brand-amber" },
-          { label: t("Recovered Assets"), value: c.recoveredAssets || t("None"), icon: Banknote, color: "brand-green" },
-          { label: t("Next Hearing"), value: c.nextHearingDate || t("N/A"), icon: Scale, color: "brand-cyan" },
+          { label: t("Date Filed"), value: liveCase.date, icon: Calendar, color: "brand-blue" },
+          { label: t("IO Assigned"), value: liveCase.investigatingOfficer || t("Unassigned"), icon: Users, color: "brand-purple" },
+          { label: t("Total Accused"), value: liveCase.accused.length, icon: Users, color: "brand-red" },
+          { label: t("Witnesses"), value: liveCase.witnessCount || 0, icon: Users, color: "brand-amber" },
+          { label: t("Recovered Assets"), value: liveCase.recoveredAssets || t("None"), icon: Banknote, color: "brand-green" },
+          { label: t("Next Hearing"), value: liveCase.nextHearingDate || t("N/A"), icon: Scale, color: "brand-cyan" },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 + (0.05 * i) }}>
             <Card className="glass-card hover:!transform-none h-full">
@@ -143,26 +229,26 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
               <CardContent className="p-6 space-y-6">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">{t("Initial Summary")}</h4>
-                  <p className="text-sm text-foreground/90 leading-relaxed border-l-2 border-border/50 pl-4 py-1">{t(c.summary)}</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed border-l-2 border-border/50 pl-4 py-1">{t(liveCase.summary)}</p>
                 </div>
                 
-                {c.aiAnalysis && (
+                {liveCase.aiAnalysis && (
                   <div className="bg-brand-blue/5 rounded-xl p-4 border border-brand-blue/10">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-brand-blue flex items-center gap-2 mb-2">
                       <Target className="h-4 w-4" /> {t("AI Pattern Analysis")}
                     </h4>
-                    <p className="text-sm text-foreground/90 leading-relaxed">{t(c.aiAnalysis)}</p>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{t(liveCase.aiAnalysis)}</p>
                   </div>
                 )}
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted/10 border border-border/30">
                     <p className="text-xs text-muted-foreground font-bold uppercase mb-1">{t("Accused")}</p>
-                    <p className="text-sm font-semibold text-foreground">{c.accused.join(", ")}</p>
+                    <p className="text-sm font-semibold text-foreground">{liveCase.accused.join(", ") || t("None")}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/10 border border-border/30">
                     <p className="text-xs text-muted-foreground font-bold uppercase mb-1">{t("Victim")}</p>
-                    <p className="text-sm font-semibold text-foreground">{t(c.victim)}</p>
+                    <p className="text-sm font-semibold text-foreground">{t(liveCase.victim)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -178,23 +264,29 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {c.leads.map((lead, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ x: 10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 + i * 0.1 }}
-                    className="flex items-start gap-4 p-4 rounded-xl bg-muted/10 border border-border/30 hover:border-brand-amber/30 hover:bg-brand-amber/5 transition-all cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-brand-amber/10 text-brand-amber flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-foreground/90 font-medium group-hover:text-foreground transition-colors">{t(lead)}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center" />
-                  </motion.div>
-                ))}
+                {isLoading ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("Generating leads from crime graph...")}</p>
+                ) : liveCase.leads && liveCase.leads.length > 0 ? (
+                  liveCase.leads.map((lead, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ x: 10, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 + i * 0.1 }}
+                      className="flex items-start gap-4 p-4 rounded-xl bg-muted/10 border border-border/30 hover:border-brand-amber/30 hover:bg-brand-amber/5 transition-all cursor-pointer group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-brand-amber/10 text-brand-amber flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground/90 font-medium group-hover:text-foreground transition-colors">{t(lead)}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center" />
+                    </motion.div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">{t("No leads generated.")}</p>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -212,8 +304,8 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-3">
-                {c.evidence && c.evidence.length > 0 ? (
-                  c.evidence.map((ev, i) => (
+                {liveCase.evidence && liveCase.evidence.length > 0 ? (
+                  liveCase.evidence.map((ev, i) => (
                     <div key={i} className="p-3 rounded-lg bg-muted/10 border border-border/30">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -250,16 +342,22 @@ function CaseDetail({ c, onBack }: { c: CaseRecord; onBack: () => void }) {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="relative space-y-0">
-                  {c.timeline.map((event, i) => (
-                    <div key={i} className="relative pl-6 pb-5 last:pb-0">
-                      {i < c.timeline.length - 1 && <div className="absolute left-[9px] top-5 w-[2px] h-full bg-border" />}
-                      <div className={`absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center ${i === c.timeline.length - 1 ? 'bg-brand-purple/10 border-2 border-brand-purple' : 'bg-muted border-2 border-border'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${i === c.timeline.length - 1 ? 'bg-brand-purple' : 'bg-muted-foreground'}`} />
+                  {isLoading ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t("Generating timeline from crime history...")}</p>
+                  ) : liveCase.timeline && liveCase.timeline.length > 0 ? (
+                    liveCase.timeline.map((event, i) => (
+                      <div key={i} className="relative pl-6 pb-5 last:pb-0">
+                        {i < liveCase.timeline.length - 1 && <div className="absolute left-[9px] top-5 w-[2px] h-full bg-border" />}
+                        <div className={`absolute left-0 top-1 w-5 h-5 rounded-full flex items-center justify-center ${i === liveCase.timeline.length - 1 ? 'bg-brand-purple/10 border-2 border-brand-purple' : 'bg-muted border-2 border-border'}`}>
+                          <div className={`w-1.5 h-1.5 rounded-full ${i === liveCase.timeline.length - 1 ? 'bg-brand-purple' : 'bg-muted-foreground'}`} />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground font-mono">{event.date}</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5">{t(event.event)}</p>
                       </div>
-                      <p className="text-[10px] text-muted-foreground font-mono">{event.date}</p>
-                      <p className="text-xs font-semibold text-foreground mt-0.5">{t(event.event)}</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">{t("No timeline events logged.")}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -279,9 +377,58 @@ export default function CaseIntelPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("date");
+  const [activeCases, setActiveCases] = useState<CaseRecord[]>(cases);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setIsLoadingList(true);
+    fetchAPI("/graph/firs/list")
+      .then((data) => {
+        if (!mounted || !data) return;
+        
+        const mapped: CaseRecord[] = data.map((f: any) => {
+          const mock = cases.find(m => m.firNumber === f.fir_id);
+          return {
+            firNumber: f.fir_id,
+            crimeType: f.crime_type || "Unknown",
+            section: f.sections || "IPC Section",
+            status: f.status?.toLowerCase().replace(" ", "-") || "under-investigation",
+            priority: mock?.priority || "medium",
+            location: f.district || "Unknown District",
+            date: f.date || "",
+            summary: f.modus_operandi || "",
+            accused: mock?.accused || [],
+            victim: mock?.victim || "Unknown",
+            solvabilityScore: mock?.solvabilityScore || 65,
+            evidence: mock?.evidence || [],
+            timeline: mock?.timeline || [],
+            leads: mock?.leads || [],
+            similarCases: mock?.similarCases || [],
+            investigatingOfficer: mock?.investigatingOfficer || "IO Assigned",
+            witnessCount: mock?.witnessCount || 0,
+            recoveredAssets: mock?.recoveredAssets || "None",
+            nextHearingDate: mock?.nextHearingDate || "N/A"
+          };
+        });
+        
+        if (mapped.length > 0) {
+          setActiveCases(mapped);
+        }
+        setIsLoadingList(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load live cases, using mock data fallback:", err);
+        setIsLoadingList(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Filter
-  const filtered = cases.filter((c) => {
+  const filtered = activeCases.filter((c) => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q ||
       c.firNumber.toLowerCase().includes(q) ||
@@ -308,9 +455,9 @@ export default function CaseIntelPage() {
     }
   });
 
-  const openCases = cases.filter((c) => c.status === "under-investigation").length;
-  const criticalCases = cases.filter((c) => c.priority === "critical").length;
-  const totalAccused = new Set(cases.flatMap((c) => c.accused)).size;
+  const openCases = activeCases.filter((c) => c.status === "under-investigation").length;
+  const criticalCases = activeCases.filter((c) => c.priority === "critical").length;
+  const totalAccused = new Set(activeCases.flatMap((c) => c.accused)).size;
 
   if (selectedCase) {
     return <CaseDetail c={selectedCase} onBack={() => setSelectedCase(null)} />;
@@ -344,7 +491,7 @@ export default function CaseIntelPage() {
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          { label: t("Total Cases"), value: cases.length, icon: FileText, color: "brand-blue" },
+          { label: t("Total Cases"), value: activeCases.length, icon: FileText, color: "brand-blue" },
           { label: t("Active Investigations"), value: openCases, icon: Clock, color: "brand-amber" },
           { label: t("Critical Priority"), value: criticalCases, icon: AlertTriangle, color: "brand-red" },
           { label: t("Total Accused"), value: totalAccused, icon: Users, color: "brand-purple" },

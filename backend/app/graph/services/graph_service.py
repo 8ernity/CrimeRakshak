@@ -458,3 +458,19 @@ class GraphService:
         if isinstance(element, dict):
             return element.get("_type") or element.get("type") or "RELATED"
         return "RELATED"
+
+    def list_firs(self, limit: int = 100) -> list[dict[str, Any]]:
+        rows = self._repo.list_firs(limit)
+        return [
+            {
+                "fir_id": r.get("fir_id"),
+                "crime_type": r.get("crime_type"),
+                "sections": r.get("sections"),
+                "status": r.get("status"),
+                "date": r.get("date"),
+                "modus_operandi": r.get("modus_operandi"),
+                "district": r.get("district"),
+            }
+            for r in rows
+        ]
+

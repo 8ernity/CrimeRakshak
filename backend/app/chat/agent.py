@@ -14,6 +14,8 @@ the router.
 """
 from __future__ import annotations
 
+import json
+import time
 from dataclasses import dataclass, field
 
 from app.chat.llm import chat_completion
@@ -52,9 +54,13 @@ a unit.
 recommended focus areas. Use this whenever the user asks for investigation support, \
 decision support, recommendations, priorities, what to focus on, or an action plan \
 for a district.
+- `case_summary`: get a comprehensive case summary for a specific FIR (by fir_id).
+- `investigation_timeline`: get the investigation timeline and prior offenses of the accused for an FIR (by fir_id).
+- `similar_cases`: list similar past cases sharing accused or crime categories with an FIR (by fir_id).
+- `suggest_leads`: generate recommended investigative leads (associates/shared identifiers) for an FIR (by fir_id).
 
 ALWAYS CALL A TOOL FIRST before answering any question about crime data. \
-Pull the actual numbers before giving any analysis.
+Pull the actual numbers or graph data before giving any analysis.
 
 WHAT YOU CAN AND SHOULD RESPOND TO:
 - "Summarize crime in Bengaluru" → call district_review_summary, then write a \
@@ -72,6 +78,8 @@ provide a full decision-support briefing.
 mean and what interventions are appropriate.
 - "Give me an action plan for Belagavi" → call multiple tools, then synthesize \
 into a prioritized action plan.
+- "Summarize case FIR-2026-0001" or "What is going on with case FIR-2026-0002" → call case_summary, then investigation_timeline to provide a complete status report.
+- "Are there any similar cases to FIR-2026-0003?" or "Who should we investigate for case FIR-2026-0004?" → call similar_cases or suggest_leads to provide investigator support.
 - Any question about crime trends, patterns, comparisons, or recommendations.
 
 GUIDANCE FRAMEWORK — when asked how cases can be solved or what should be done \
@@ -115,10 +123,7 @@ and a space) and nothing else.
 - Be thorough but readable — like a detailed briefing note an officer would \
 actually find useful. Do NOT give one-line answers to complex questions.
 
-DATA NOTE: all figures are AGGREGATE reported-case counts, not individual case \
-records. There is no per-FIR, per-accused or per-victim data. If asked about a \
-specific FIR, person or victim, explain that only aggregate statistics are \
-available and offer district/crime-type analysis instead.
+DATA NOTE: For general district/state trends, use aggregate statistics tools (e.g. `query_crime_stats`, `district_review_summary`). For questions about specific cases (FIRs), accused persons, victims, timelines, leads, or similar cases, use the case-level graph tools (`case_summary`, `investigation_timeline`, `similar_cases`, `suggest_leads`).
 
 Cite only figures returned by tools. If the data cannot answer a specific aspect, \
 say so and provide the general guidance anyway.
@@ -135,6 +140,9 @@ class AgentTurn:
     # New messages produced this turn (assistant + tool msgs) for persistence.
     new_messages: list[dict] = field(default_factory=list)
     tool_calls: int = 0
+    # Structured reasoning trace (Block 9 explainability): one entry per tool
+    # execution — tool name, arguments, SQL, row count, timing, status.
+    trace: list[dict] = field(default_factory=list)
 
 
 def _system_message(language: str = "en") -> dict:
@@ -170,6 +178,7 @@ def run_agent(user_message: str, history: list[dict] | None = None, language: st
                                 {"role": "user", "content": user_message}]
         new_messages: list[dict] = [{"role": "user", "content": user_message}]
         sources: list[str] = []
+        trace: list[dict] = []
         tool_calls = 0
 
         for _ in range(MAX_TOOL_ROUNDS):
@@ -214,6 +223,7 @@ def run_agent(user_message: str, history: list[dict] | None = None, language: st
                     sources=sources,
                     new_messages=new_messages,
                     tool_calls=tool_calls,
+                    trace=trace,
                 )
 
             # Execute each requested tool and feed results back.
@@ -222,13 +232,33 @@ def run_agent(user_message: str, history: list[dict] | None = None, language: st
                     logger.warning("Skipping tool call with empty function name (id=%s)", tc.id)
                     continue
                 tool_calls += 1
+                started = time.perf_counter()
                 try:
                     result, refs = dispatch_tool(tc.function.name, tc.function.arguments)
                 except Exception as exc:
                     logger.error("Tool %s raised: %s", tc.function.name, exc, exc_info=True)
                     result = {"error": f"Tool execution failed: {exc}"}
                     refs = []
+                duration_ms = round((time.perf_counter() - started) * 1000)
                 sources.extend(refs)
+
+                # Structured trace step for the explainability UI.
+                try:
+                    args = json.loads(tc.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+                is_error = isinstance(result, dict) and "error" in result
+                trace.append({
+                    "step": tool_calls,
+                    "tool": tc.function.name,
+                    "arguments": {k: v for k, v in args.items() if k != "sql"},
+                    "sql": (result.get("sql") if isinstance(result, dict) else None) or args.get("sql"),
+                    "row_count": result.get("row_count") if isinstance(result, dict) else None,
+                    "duration_ms": duration_ms,
+                    "status": "error" if is_error else "ok",
+                    "detail": result.get("error") if is_error else None,
+                })
+
                 tool_msg = {
                     "role": "tool",
                     "tool_call_id": tc.id,
@@ -242,15 +272,28 @@ def run_agent(user_message: str, history: list[dict] | None = None, language: st
         resp = chat_completion(messages, model=settings.LLM_AGENT_MODEL)
         answer = resp.choices[0].message.content or "I couldn't complete that request."
         new_messages.append({"role": "assistant", "content": answer})
-        return AgentTurn(answer=answer, sources=sources, new_messages=new_messages, tool_calls=tool_calls)
+        return AgentTurn(answer=answer, sources=sources, new_messages=new_messages,
+                         tool_calls=tool_calls, trace=trace)
     except Exception as exc:
         logger.warning("LLM agent run failed, invoking offline fallback handler: %s", exc)
+        started = time.perf_counter()
         answer, sources = generate_fallback_response(user_message)
         new_messages = [
             {"role": "user", "content": user_message},
             {"role": "assistant", "content": answer}
         ]
-        return AgentTurn(answer=answer, sources=sources, new_messages=new_messages, tool_calls=0)
+        fallback_trace = [{
+            "step": 1,
+            "tool": "offline_fallback",
+            "arguments": {},
+            "sql": None,
+            "row_count": None,
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+            "status": "ok",
+            "detail": "LLM unreachable — rule-based answer computed from local DuckDB data.",
+        }]
+        return AgentTurn(answer=answer, sources=sources, new_messages=new_messages,
+                         tool_calls=0, trace=fallback_trace)
 
 
 

@@ -1,16 +1,22 @@
-"""Block 6 — Investigator Decision Support tools (Neo4j case-level data).
+"""Block 6 — Investigator Decision Support tools (case-level data).
 
 These tools operate on the *case-level* graph (Person / FIR / BankAccount /
-PhoneNumber, currently synthetic) rather than the aggregate CSV stats. They are
-registered as agent tools so the chatbot routes investigator questions
-("summarise FIR-2024-1234", "any leads?", "similar cases?") here automatically.
+PhoneNumber) rather than the aggregate CSV stats. They are registered as agent
+tools so the chatbot routes investigator questions ("summarise FIR-2024-1234",
+"any leads?", "similar cases?") here automatically.
 
-Every tool returns grounded fields plus a ``_source`` list describing the graph
-query used, for Block 9 explainability. If Neo4j is unavailable the tool returns
-a soft ``error`` so the agent can tell the user rather than crashing.
+Data source strategy: the rich synthetic case CSVs (1200 FIRs with crime type,
+modus operandi, accused/victims, districts) are the primary source via
+:mod:`app.graph.csv_graph`. Neo4j is consulted only for FIRs the CSV graph does
+not know (e.g. externally ingested ones). If neither source has the FIR the
+tool returns a soft ``error`` so the agent can tell the user rather than crash.
+
+Every tool returns grounded fields plus a ``_source`` list describing the query
+used, for Block 9 explainability.
 """
 from __future__ import annotations
 
+from app.graph import csv_graph
 from app.graph.connection import GraphConnectionError, graph_connection
 from app.graph.repositories.graph_repository import GraphRepository
 from app.graph.services.graph_service import GraphNotFoundError, GraphService
@@ -34,12 +40,37 @@ def _names(nodes) -> list[str]:
 
 # ── case_summary ─────────────────────────────────────────────────────────
 def case_summary(fir_id: str) -> dict:
+    # Primary: rich CSV case graph.
+    profile = csv_graph.get_fir_profile(fir_id)
+    if profile is not None:
+        fir_props = profile["fir"]["properties"]
+        return {
+            "fir_id": fir_id,
+            "crime_type": fir_props.get("crime_type"),
+            "modus_operandi": fir_props.get("modus_operandi"),
+            "sections": fir_props.get("sections"),
+            "status": fir_props.get("status"),
+            "date": fir_props.get("date"),
+            "district": fir_props.get("district"),
+            "accused": [n["properties"].get("name", n["id"]) for n in profile["accused"]],
+            "victims": [n["properties"].get("name", n["id"]) for n in profile["victims"]],
+            "witnesses": [],
+            "crimes": [n["properties"].get("name") for n in profile["crimes"]],
+            "locations": [n["properties"].get("name") for n in profile["locations"]],
+            "counts": {
+                "accused": len(profile["accused"]),
+                "victims": len(profile["victims"]),
+                "witnesses": 0,
+            },
+            "_source": [f"case-csv: FIR profile of {fir_id}"],
+        }
+    # Fallback: Neo4j (externally ingested FIRs).
     try:
         p = _service().get_fir_profile(fir_id)
     except GraphNotFoundError as exc:
         return {"error": str(exc)}
     except GraphConnectionError:
-        return {"error": "graph database unavailable"}
+        return {"error": f"FIR '{fir_id}' not found in case data and graph database unavailable"}
     return {
         "fir_id": fir_id,
         "accused": _names(p.accused),
@@ -68,10 +99,15 @@ RETURN f.date AS fir_date,
 
 
 def investigation_timeline(fir_id: str) -> dict:
+    # Primary: rich CSV case graph.
+    result = csv_graph.get_fir_timeline(fir_id)
+    if result is not None:
+        return result
+    # Fallback: Neo4j.
     try:
         rows = graph_connection.run_read(_TIMELINE_CYPHER, {"fir_id": fir_id})
     except GraphConnectionError:
-        return {"error": "graph database unavailable"}
+        return {"error": f"FIR '{fir_id}' not found in case data and graph database unavailable"}
     if not rows:
         return {"error": f"FIR '{fir_id}' not found"}
 
@@ -107,10 +143,15 @@ RETURN shared_accused_firs,
 
 
 def similar_cases(fir_id: str, limit: int = 10) -> dict:
+    # Primary: rich CSV case graph.
+    result = csv_graph.get_similar_cases(fir_id, limit)
+    if result is not None:
+        return result
+    # Fallback: Neo4j.
     try:
         rows = graph_connection.run_read(_SIMILAR_CYPHER, {"fir_id": fir_id})
     except GraphConnectionError:
-        return {"error": "graph database unavailable"}
+        return {"error": f"FIR '{fir_id}' not found in case data and graph database unavailable"}
     if not rows:
         return {"error": f"FIR '{fir_id}' not found"}
 
@@ -157,11 +198,16 @@ LIMIT 25
 
 
 def suggest_leads(fir_id: str) -> dict:
+    # Primary: rich CSV case graph.
+    result = csv_graph.get_fir_leads(fir_id)
+    if result is not None:
+        return result
+    # Fallback: Neo4j.
     try:
         assoc = graph_connection.run_read(_LEADS_ASSOCIATES_CYPHER, {"fir_id": fir_id})
         shared = graph_connection.run_read(_LEADS_SHARED_ID_CYPHER, {"fir_id": fir_id})
     except GraphConnectionError:
-        return {"error": "graph database unavailable"}
+        return {"error": f"FIR '{fir_id}' not found in case data and graph database unavailable"}
 
     leads = []
     for r in assoc:
