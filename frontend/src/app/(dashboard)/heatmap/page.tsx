@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { districts } from "@/data/crimeData";
 import { getRiskTier, getRiskScore, getTopDistricts, getSafestDistricts } from "@/lib/derive";
@@ -20,11 +20,28 @@ export default function HeatmapPage() {
   const [crimeFilter, setCrimeFilter] = useState<"ALL" | "VIOLENT" | "CYBER" | "NARCOTICS">("ALL");
   const [shiftFilter, setShiftFilter] = useState<"DAY" | "NIGHT">("DAY");
 
-  const selectedDistrict = districts.find((d) => d.name === selected);
-  const top5 = getTopDistricts(5);
-  const safest5 = getSafestDistricts(5);
+  const [activeDistricts, setActiveDistricts] = useState(districts);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
 
-  const sortedDistricts = [...districts].sort((a, b) => (b.ipc + b.sll) - (a.ipc + a.sll));
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/analytics/districts")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setActiveDistricts(data);
+          setIsLiveConnected(true);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const selectedDistrict = activeDistricts.find((d) => d.name === selected) || activeDistricts[0];
+  const top5 = getTopDistricts(5, "total", activeDistricts);
+  const safest5 = getSafestDistricts(5, activeDistricts);
+
+  const sortedDistricts = [...activeDistricts].sort((a, b) => (b.ipc + b.sll) - (a.ipc + a.sll));
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -34,6 +51,12 @@ export default function HeatmapPage() {
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase bg-brand-green/10 text-brand-green border border-brand-green/20">
               {t("GIS SPATIAL CLUSTER & HOTSPOT TELEMETRY")}
             </span>
+            {isLiveConnected && (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live DuckDB KSP Telemetry
+              </span>
+            )}
           </div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold flex items-center gap-2 text-foreground">
             <Map className="h-7 w-7 text-brand-green" /> {t("AI Crime Hotspot Map & GIS Forensics")}
@@ -88,7 +111,7 @@ export default function HeatmapPage() {
 
       {/* Real Interactive Karnataka State GIS Vector Map */}
       <KarnatakaVectorMap
-        districts={districts}
+        districts={activeDistricts}
         selectedDistrict={selected}
         onSelectDistrict={(name) => {
           setSelected(name);

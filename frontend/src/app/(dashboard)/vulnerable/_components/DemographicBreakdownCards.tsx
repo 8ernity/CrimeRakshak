@@ -1,12 +1,12 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { sociologicalDetails } from "@/data/sociologicalData";
+import { sociologicalDetails, type SocioCategoryDetail } from "@/data/sociologicalData";
 import * as motion from "motion/react-client";
 import { useLanguage } from "@/components/LanguageContext";
 import { ShieldAlert, Baby, Users, ArrowUpRight, ArrowDownRight, MapPin } from "lucide-react";
 
-export default function DemographicBreakdownCards() {
+export default function DemographicBreakdownCards({ details = sociologicalDetails }: { details?: SocioCategoryDetail[] }) {
   const { t } = useLanguage();
 
   const getGroupHeaderIcon = (category: string) => {
@@ -48,7 +48,7 @@ export default function DemographicBreakdownCards() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {sociologicalDetails.map((group, idx) => (
+        {details.map((group, idx) => (
           <Card
             key={group.category}
             className={`glass-card transition-all duration-300 border ${getGroupBorderColor(group.category)} flex flex-col`}

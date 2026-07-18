@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as motion from "motion/react-client";
@@ -65,9 +65,45 @@ function RiskMeter({ score }: { score: number }) {
 
 function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
   const { t } = useLanguage();
+  const [liveRiskScore, setLiveRiskScore] = useState(o.riskScore);
+  const [liveRecidivismSummary, setLiveRecidivismSummary] = useState(o.aiBehavioralNote);
+  const [isLiveScored, setIsLiveScored] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const aggression = o.personalityTraits.find(tr => tr.trait === "Aggression")?.score || 50;
+    const impulsivity = o.personalityTraits.find(tr => tr.trait === "Impulsivity")?.score || 50;
+    const sophistication = o.personalityTraits.find(tr => tr.trait === "Criminal Sophistication")?.score || 50;
+
+    fetch("/api/analytics/risk-score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        total_firs: o.totalFIRs,
+        convictions: o.convictions,
+        pending_cases: o.pendingCases,
+        is_habitual: o.isHabitual,
+        status: o.status,
+        aggression,
+        impulsivity,
+        sophistication
+      })
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (mounted && data) {
+          setLiveRiskScore(data.risk_score);
+          setLiveRecidivismSummary(data.criminology_summary);
+          setIsLiveScored(true);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [o]);
+
   // Radar chart data
   const radarData = [
-    { subject: "Violence", value: o.crimeTypes.some(c => ["Assault", "Robbery", "Armed Robbery"].includes(c)) ? Math.min(o.riskScore + 5, 100) : Math.max(o.riskScore - 20, 15) },
+    { subject: "Violence", value: o.crimeTypes.some(c => ["Assault", "Robbery", "Armed Robbery"].includes(c)) ? Math.min(liveRiskScore + 5, 100) : Math.max(liveRiskScore - 20, 15) },
     { subject: "Recidivism", value: Math.min(o.totalFIRs * 13, 100) },
     { subject: "Flight Risk", value: o.status === "absconding" ? 95 : o.status === "on-bail" ? 65 : o.status === "active" ? 50 : 20 },
     { subject: "Network", value: Math.min(o.associates.length * 35, 100) },
@@ -117,6 +153,12 @@ function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
                   <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded border ${statusStyles[o.status]}`}>{t(o.status)}</span>
                   {o.isHabitual && <span className="text-xs font-bold uppercase px-2.5 py-1 rounded border border-brand-red/30 bg-brand-red/10 text-brand-red">{t("Habitual Offender")}</span>}
                   <span className="text-xs font-semibold text-muted-foreground bg-muted/20 px-2.5 py-1 rounded border border-border/50">{t("ID:")} {o.id}</span>
+                  {isLiveScored && (
+                    <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded border border-emerald-500/30 flex items-center gap-1 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      {t("Live Risk Engine Active")}
+                    </span>
+                  )}
                 </div>
 
                 {/* Physical Description Row */}
@@ -152,7 +194,7 @@ function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
             </div>
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-brand-purple mb-1.5">{t("AI Behavioral Profile")}</h3>
-              <p className="text-sm text-foreground/90 leading-relaxed">{t(o.aiBehavioralNote)}</p>
+              <p className="text-sm text-foreground/90 leading-relaxed">{t(liveRecidivismSummary)}</p>
             </div>
           </div>
         </div>
@@ -167,7 +209,7 @@ function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
           { label: t("Pending"), value: o.pendingCases, icon: Clock, color: "brand-cyan" },
           { label: t("Victims"), value: o.victimCount, icon: Users, color: "brand-orange" },
           { label: t("Est. Loss"), value: o.estimatedLoss, icon: AlertTriangle, color: "brand-amber" },
-          { label: t("Risk Score"), value: `${o.riskScore}/100`, icon: Activity, color: o.riskScore >= 80 ? "brand-red" : "brand-amber" },
+          { label: t("Risk Score"), value: `${liveRiskScore}/100`, icon: Activity, color: liveRiskScore >= 80 ? "brand-red" : "brand-amber" },
           { label: t("Age"), value: o.age, icon: User, color: "brand-blue" },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 + (0.05 * i) }}>

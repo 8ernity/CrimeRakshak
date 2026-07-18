@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { monthlyComparison } from "@/data/crimeData";
 import { getMonthOverMonthChange } from "@/lib/derive";
@@ -20,6 +21,34 @@ import { DecadalLongitudinalChart } from "./_components/DecadalLongitudinalChart
 
 export default function TrendsPage() {
   const { t } = useLanguage();
+  const [liveHotspots, setLiveHotspots] = useState<any[] | undefined>(undefined);
+  const [liveDecadal, setLiveDecadal] = useState<any[] | undefined>(undefined);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/analytics/hotspots")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setLiveHotspots(data);
+          setIsLiveConnected(true);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/analytics/trends/yearly")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setLiveDecadal(data);
+        }
+      })
+      .catch(() => {});
+
+    return () => { mounted = false; };
+  }, []);
+
   const lineData = monthlyComparison.map((r) => ({
     name: t(r.crime).length > 12 ? t(r.crime).slice(0, 12) + "…" : t(r.crime),
     "YTD Total": r.ytd,
@@ -40,6 +69,12 @@ export default function TrendsPage() {
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase bg-brand-purple/10 text-brand-purple border border-brand-purple/20">
               {t("LONGITUDINAL TEMPORAL & SEASONAL PATTERN ANALYTICS")}
             </span>
+            {isLiveConnected && (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live DuckDB KSP Telemetry
+              </span>
+            )}
           </div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-brand-purple">
             {t("Trend Analysis")}
@@ -79,7 +114,7 @@ export default function TrendsPage() {
 
       {/* 25-Year Longitudinal Decadal Forecasting & Telemetry */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <DecadalLongitudinalChart />
+        <DecadalLongitudinalChart series={liveDecadal} />
       </motion.div>
 
       {/* Peak Season Callouts */}
@@ -259,7 +294,7 @@ export default function TrendsPage() {
       <EmergingClusterAlerts />
 
       {/* District Crime Hotspot Ranking */}
-      <DistrictHotspotTable />
+      <DistrictHotspotTable hotspots={liveHotspots} />
 
       {/* Crime Category Composition */}
       <CrimeCategoryBreakdown />

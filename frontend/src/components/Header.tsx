@@ -46,6 +46,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
+          suppressHydrationWarning
           className="lg:hidden pointer-events-auto bg-background/50 backdrop-blur-sm border border-border/50"
           onClick={() => setMobileOpen(true)}
         >

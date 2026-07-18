@@ -210,6 +210,13 @@ export default function KarnatakaVectorMap({
 
       mapInstanceRef.current = map;
       layerGroupRef.current = L.layerGroup().addTo(map);
+
+      // Ensure Leaflet recalculates viewport dimensions right after DOM layout settles
+      setTimeout(() => {
+        if (mapInstanceRef.current?.invalidateSize) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 250);
     }
 
     const map = mapInstanceRef.current;
@@ -233,6 +240,12 @@ export default function KarnatakaVectorMap({
       maxZoom: 18,
       subdomains: "abcd",
     }).addTo(map);
+
+    setTimeout(() => {
+      if (map?.invalidateSize) {
+        map.invalidateSize();
+      }
+    }, 150);
 
     // Clear previous layers
     if (layerGroupRef.current) {

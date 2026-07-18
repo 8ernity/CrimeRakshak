@@ -95,6 +95,7 @@ export function Sidebar() {
       )}
 
       <aside
+        suppressHydrationWarning
         className={cn(
           "fixed top-0 left-0 h-screen flex flex-col z-50 transition-all duration-300",
           "bg-transparent",
@@ -109,6 +110,7 @@ export function Sidebar() {
         <div className="h-24 flex items-center px-6 gap-3">
           <button
             onClick={toggle}
+            suppressHydrationWarning
             className="flex items-center gap-3 flex-1 min-w-0 group"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -131,6 +133,7 @@ export function Sidebar() {
           {/* Mobile close */}
           <button
             onClick={() => setMobileOpen(false)}
+            suppressHydrationWarning
             className="lg:hidden p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground"
           >
             <X className="h-5 w-5" />
@@ -140,6 +143,7 @@ export function Sidebar() {
           {!collapsed && (
             <button
               onClick={toggle}
+              suppressHydrationWarning
               className="hidden lg:flex p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/60"
             >
               <PanelLeftClose className="h-5 w-5" />
@@ -204,7 +208,7 @@ export function Sidebar() {
                 <Link href="/settings" title={t("Settings")} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors">
                   <Settings className="h-4 w-4" />
                 </Link>
-                <button title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
+                <button suppressHydrationWarning title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>

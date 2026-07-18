@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { sociologicalDetails } from "@/data/sociologicalData";
 import { Card, CardContent } from "@/components/ui/card";
 import { womenCrimes, childrenCrimes, scstCrimes, ipcCrimes } from "@/data/crimeData";
 import * as motion from "motion/react-client";
@@ -17,25 +18,52 @@ import SocioRiskRadar from "./_components/SocioRiskRadar";
 
 export default function VulnerablePage() {
   const { t } = useLanguage();
+  const [liveDetails, setLiveDetails] = useState<any[]>(sociologicalDetails);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/analytics/sociological")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (mounted && Array.isArray(data) && data.length > 0) {
+          setLiveDetails(data);
+          setIsLiveConnected(true);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   const fatalAcc = ipcCrimes.find((c) => c.category === "Fatal Road Accidents");
   const nonFatalAcc = ipcCrimes.find((c) => c.category === "Non-Fatal Road Accidents");
 
-  const womenData = womenCrimes.map((r) => ({
-    name: t(r.crime).length > 16 ? t(r.crime).slice(0, 16) + "…" : t(r.crime),
-    fullName: r.crime,
-    "2024": r.y2024, "2025": r.y2025,
-    change: ((r.y2025 - r.y2024) / r.y2024) * 100
+  const womenGroup = liveDetails.find(g => g.category === "Women") || sociologicalDetails[0];
+  const childGroup = liveDetails.find(g => g.category === "Children") || sociologicalDetails[1];
+  const scstGroup = liveDetails.find(g => g.category === "SC / ST Protection") || sociologicalDetails[2];
+
+  const totalWomen2025 = womenGroup.totalCases;
+  const womenChange = womenGroup.yoyChangePct;
+
+  const womenData = womenGroup.subCategories.map((sub: any) => ({
+    name: t(sub.name).length > 16 ? t(sub.name).slice(0, 16) + "…" : t(sub.name),
+    fullName: sub.name,
+    "2024": Math.round(sub.cases / (1 + (womenChange / 100))),
+    "2025": sub.cases,
+    change: sub.sharePct
   }));
-  
-  const totalWomen2024 = womenData.reduce((acc, curr) => acc + curr["2024"], 0);
-  const totalWomen2025 = womenData.reduce((acc, curr) => acc + curr["2025"], 0);
-  const womenChange = ((totalWomen2025 - totalWomen2024) / totalWomen2024) * 100;
 
-  const childData = childrenCrimes.map((r) => ({ name: t(r.crime), value: r.val }));
-  const totalChildren = childData.reduce((acc, curr) => acc + curr.value, 0);
+  const childData = childGroup.subCategories.map((sub: any) => ({
+    name: t(sub.name),
+    value: sub.cases
+  }));
+  const totalChildren = childGroup.totalCases;
 
-  const scstData = scstCrimes.map((r) => ({ name: t(r.crime), value: r.val }));
-  const totalScst = scstData.reduce((acc, curr) => acc + curr.value, 0);
+  const scstData = scstGroup.subCategories.map((sub: any) => ({
+    name: t(sub.name),
+    value: sub.cases
+  }));
+  const totalScst = scstGroup.totalCases;
 
   const roadData = [
     { name: t("Fatal Accidents"), value: fatalAcc?.total || 0, color: brandColors.red },
@@ -47,6 +75,17 @@ export default function VulnerablePage() {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5, ease: "easeOut" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase bg-brand-purple/10 text-brand-purple border border-brand-purple/20">
+              {t("DEMOGRAPHIC SAFETY ANALYSIS")}
+            </span>
+            {isLiveConnected && (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live DuckDB KSP Telemetry
+              </span>
+            )}
+          </div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-brand-purple">
             {t("Vulnerable Groups Analysis")}
           </h1>
@@ -268,7 +307,7 @@ export default function VulnerablePage() {
       <UrbanSocioCorrelationMatrix />
 
       {/* Granular Demographic Sub-Head Breakdown & Risk Drivers */}
-      <DemographicBreakdownCards />
+      <DemographicBreakdownCards details={liveDetails} />
 
       {/* District Multi-Factor Sociological Radar & Public Health Correlations */}
       <SocioRiskRadar />

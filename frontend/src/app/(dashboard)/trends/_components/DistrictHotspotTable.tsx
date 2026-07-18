@@ -21,13 +21,13 @@ const columns: { key: SortKey; label: string; hideOnMobile?: boolean }[] = [
   { key: "total", label: "Total (Jan 2026)" },
 ];
 
-export default function DistrictHotspotTable() {
+export default function DistrictHotspotTable({ hotspots = districtHotspots }: { hotspots?: DistrictHotspot[] }) {
   const { t } = useLanguage();
   const [sortKey, setSortKey] = useState<SortKey>("total");
   const [sortAsc, setSortAsc] = useState(false);
 
   const sorted = useMemo(() => {
-    return [...districtHotspots].sort((a, b) => {
+    return [...hotspots].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (typeof aVal === "string" && typeof bVal === "string") {
@@ -35,7 +35,7 @@ export default function DistrictHotspotTable() {
       }
       return sortAsc ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
     });
-  }, [sortKey, sortAsc]);
+  }, [hotspots, sortKey, sortAsc]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -46,7 +46,7 @@ export default function DistrictHotspotTable() {
     }
   };
 
-  const maxTotal = Math.max(...districtHotspots.map((d) => d.total));
+  const maxTotal = Math.max(...hotspots.map((d) => d.total));
 
   return (
     <motion.div

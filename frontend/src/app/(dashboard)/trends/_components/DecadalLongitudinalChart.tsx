@@ -24,7 +24,7 @@ import { useLanguage } from "@/components/LanguageContext";
 
 type MetricKey = "totalIpc" | "sll" | "cyber" | "theft" | "violentCrime" | "murder";
 
-export function DecadalLongitudinalChart() {
+export function DecadalLongitudinalChart({ series = karnatakaStateDecadalSeries }: { series?: DecadalTrendPoint[] }) {
   const { t } = useLanguage();
   const [metric, setMetric] = useState<MetricKey>("totalIpc");
 
@@ -87,7 +87,7 @@ export function DecadalLongitudinalChart() {
         <div className="h-[340px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={karnatakaStateDecadalSeries}
+              data={series}
               margin={{ left: 10, right: 20, top: 30, bottom: 20 }}
             >
               <defs>
