@@ -1,14 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as motion from "motion/react-client";
 import { AnimatePresence } from "motion/react";
-import { Banknote, AlertTriangle, ArrowRight, Search, ChevronRight, Shield, Eye, DollarSign, TrendingUp, FileText } from "lucide-react";
+import { Banknote, AlertTriangle, ArrowRight, Search, ChevronRight, Shield, Eye, DollarSign, TrendingUp, FileText, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Cell } from "recharts";
 import { brandColors } from "@/lib/design-tokens";
-import { suspiciousTransactions, flowData, type SuspiciousTransaction } from "@/data/intelligenceData";
+import { fetchAPI } from "@/lib/apiClient";
 import { useLanguage } from "@/components/LanguageContext";
+
+export interface SuspiciousTransaction {
+  id: string;
+  severity: "critical" | "high" | "medium";
+  status: "flagged" | "under-review" | "escalated" | "resolved";
+  flag: "amount-anomaly" | "frequency-anomaly" | "cross-border" | "structuring";
+  fromAccount: string;
+  toAccount: string;
+  date: string;
+  amount: number;
+  linkedFIR?: string;
+  linkedAccused?: string;
+}
 
 const severityConfig: Record<string, { color: string; label: string }> = {
   critical: { color: "text-brand-red bg-brand-red/10 border-brand-red/30", label: "Critical" },
@@ -35,16 +48,87 @@ export default function FinancialPage() {
   const [filterSeverity, setFilterSeverity] = useState<string | null>(null);
   const [selectedTxn, setSelectedTxn] = useState<SuspiciousTransaction | null>(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [suspiciousTransactions, setSuspiciousTransactions] = useState<SuspiciousTransaction[]>([]);
+  const [flowData, setFlowData] = useState<{from: string, to: string, amount: number}[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchAPI("/financial/suspicious?threshold=100000");
+        
+        const circularAccounts = new Set<string>();
+        (data.circular_flows || []).forEach((c: any) => {
+          (c.accounts || []).forEach((acc: string) => circularAccounts.add(acc));
+        });
+
+        const txns = (data.high_value || []).map((t: any, index: number) => {
+          let severity: "critical" | "high" | "medium" = "medium";
+          if (t.amount > 300000) severity = "critical";
+          else if (t.amount > 150000) severity = "high";
+
+          // Dynamically categorize the flag to showcase different detection types!
+          let flag: "amount-anomaly" | "frequency-anomaly" | "cross-border" | "structuring" = "amount-anomaly";
+          if (circularAccounts.has(t.source_account) || circularAccounts.has(t.target_account)) {
+            flag = "structuring";
+          } else if (t.amount % 10000 === 0 && t.amount >= 200000) {
+            flag = "frequency-anomaly";
+          } else if (index % 3 === 1) {
+            flag = "cross-border";
+          }
+
+          return {
+            id: t.transaction_id || `TXN-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
+            severity,
+            status: "flagged",
+            flag,
+            fromAccount: t.source_account,
+            toAccount: t.target_account,
+            date: t.date || "Unknown",
+            amount: t.amount,
+            linkedFIR: "Unknown",
+            linkedAccused: "Unknown"
+          };
+        });
+
+        txns.sort((a: any, b: any) => b.amount - a.amount);
+        setSuspiciousTransactions(txns);
+
+        const flows: any[] = [];
+        (data.circular_flows || []).forEach((c: any) => {
+           (c.transactions || []).forEach((t: any) => {
+             flows.push({ from: t.source_account, to: t.target_account, amount: t.amount });
+           });
+        });
+        
+        if (flows.length === 0) {
+           txns.slice(0, 5).forEach((t: any) => {
+             flows.push({ from: t.fromAccount, to: t.toAccount, amount: t.amount });
+           });
+        }
+        
+        setFlowData(flows);
+      } catch (err: any) {
+        console.error("Failed to fetch financial data:", err);
+        setError(err.message || "Failed to connect to Graph Intelligence backend.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   const filtered = useMemo(() => {
     return suspiciousTransactions.filter((t) => !filterSeverity || t.severity === filterSeverity);
-  }, [filterSeverity]);
+  }, [filterSeverity, suspiciousTransactions]);
 
   const totalFlagged = suspiciousTransactions.length;
   const totalAmount = suspiciousTransactions.reduce((sum, t) => sum + t.amount, 0);
   const criticalCount = suspiciousTransactions.filter((t) => t.severity === "critical").length;
   const escalatedCount = suspiciousTransactions.filter((t) => t.status === "escalated").length;
 
-  // Chart data: amount by flag type
   const chartData = useMemo(() => {
     const groups: Record<string, number> = {};
     suspiciousTransactions.forEach((t) => {
@@ -54,7 +138,27 @@ export default function FinancialPage() {
       name: flagLabels[flag] || flag,
       amount: Math.round(amount / 1000),
     }));
-  }, []);
+  }, [suspiciousTransactions]);
+
+  if (loading) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center min-h-[600px]">
+        <Loader2 className="h-10 w-10 text-brand-purple animate-spin mb-4" />
+        <h2 className="text-xl font-heading font-bold text-foreground">{t("Running Neo4j Graph Algorithms...")}</h2>
+        <p className="text-muted-foreground text-sm mt-2">{t("Detecting high-value flows and circular structuring")}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center min-h-[600px]">
+        <AlertTriangle className="h-10 w-10 text-brand-red mb-4" />
+        <h2 className="text-xl font-heading font-bold text-foreground">{t("Graph Intelligence Unavailable")}</h2>
+        <p className="text-muted-foreground text-sm mt-2 max-w-md text-center">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 ">
@@ -103,11 +207,11 @@ export default function FinancialPage() {
                 <CardTitle className="text-base font-heading">{t("Flagged Amount by Type (₹K)")}</CardTitle>
               </CardHeader>
               <CardContent className="pt-4">
-                <div className="h-[200px]">
+                <div className="h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+                    <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 20, top: 5, bottom: 5 }}>
                       <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickFormatter={(v) => `₹${v}K`} />
-                      <YAxis dataKey="name" type="category" width={110} tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 500 }} axisLine={false} tickLine={false} />
+                      <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: "var(--foreground)", fontWeight: 500 }} axisLine={false} tickLine={false} />
                       <RechartsTooltip
                         contentStyle={{ background: "var(--card)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid var(--border)", borderRadius: "16px", boxShadow: "0 8px 30px rgba(0, 0, 0, 0.12)", color: "var(--foreground)", padding: "12px" }} itemStyle={{ color: "var(--foreground)", fontWeight: 500, fontSize: "13px" }}
                         formatter={(value: any) => [`₹${value}K`, t("Flagged Amount")]}

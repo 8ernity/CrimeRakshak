@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { brandColors, chartPalette } from "@/lib/design-tokens";
 import { useLanguage } from "@/components/LanguageContext";
+import { fetchAPI } from "@/lib/apiClient";
 import {
   ipcCrimes, districts, monthlyComparison, stateTotals,
 } from "@/data/crimeData";
@@ -70,12 +71,67 @@ function buildAuditLog() {
     timestamp: new Date(now.getTime() - (ops.length - i) * 38000 - i * 3800),
   }));
 }
-const AUDIT_LOG = buildAuditLog();
+const FALLBACK_AUDIT_LOG = buildAuditLog();
+
+interface AuditEntry {
+  id: string;
+  action: string;
+  resource: string;
+  rows: number;
+  role: string;
+  detail: string;
+  timestamp: Date;
+}
+
+// Map a persistent backend audit row (POST /admin/audit-logs shape) into the
+// display shape used by the log panel.
+function mapBackendAuditRow(r: {
+  log_id: number;
+  user_id: number | null;
+  action: string;
+  resource: string | null;
+  detail: string | null;
+  status: string;
+  timestamp: string | null;
+}): AuditEntry {
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = r.detail ? JSON.parse(r.detail) : {};
+  } catch {
+    /* non-JSON detail — show raw below */
+  }
+  const category = (r.action.split(".")[0] || "event").toUpperCase();
+  let detailText = "";
+  if (r.action === "chat.answer") {
+    const q = typeof parsed.question === "string" ? parsed.question : "";
+    const tools = typeof parsed.tool_calls === "number" ? parsed.tool_calls : 0;
+    detailText = `AI answered "${q.slice(0, 90)}${q.length > 90 ? "…" : ""}" using ${tools} grounded tool call${tools === 1 ? "" : "s"}`;
+  } else if (parsed.error) {
+    detailText = `${r.action} failed: ${String(parsed.error).slice(0, 120)}`;
+  } else {
+    detailText = `${r.action}${r.resource ? ` on ${r.resource}` : ""} — ${r.status}`;
+  }
+  return {
+    id: `AUD-${String(r.log_id).padStart(6, "0")}`,
+    action: r.status === "failure" ? "FAILURE" : category,
+    resource: r.resource ?? r.action,
+    rows: typeof parsed.tool_calls === "number" ? parsed.tool_calls : 0,
+    role: r.user_id != null ? `user ${r.user_id}` : "system",
+    detail: detailText,
+    timestamp: r.timestamp ? new Date(r.timestamp) : new Date(),
+  };
+}
 
 const ACTION_COLOR: Record<string, string> = {
   QUERY:   brandColors.teal,
   COMPUTE: brandColors.blue,
   RENDER:  brandColors.purple,
+  CHAT:    brandColors.purple,
+  GRAPH:   brandColors.blue,
+  FINANCIAL: brandColors.amber,
+  RBAC:    brandColors.orange,
+  AUTH:    brandColors.cyan,
+  FAILURE: brandColors.red,
 };
 
 const TIER_STYLE: Record<string, string> = {
@@ -136,8 +192,24 @@ export default function ExplainabilityPage() {
   const [selectedShapeId, setSelectedShapeId] = useState<string>(shapData[0]?.id ?? "");
   const [activeDistrict, setActiveDistrict] = useState<string>(TOP_DISTRICTS[0]?.name ?? "");
   const [activeTab, setActiveTab] = useState<"trail" | "radar" | "raw">("trail");
-  const [logFilter, setLogFilter] = useState<"all" | "QUERY" | "COMPUTE" | "RENDER">("all");
+  const [logFilter, setLogFilter] = useState<string>("all");
   const [liveTime, setLiveTime] = useState("");
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>(FALLBACK_AUDIT_LOG);
+  const [auditIsLive, setAuditIsLive] = useState(false);
+
+  // Pull the persistent audit trail from the backend; keep the synthetic
+  // session log as a fallback when the API is unreachable.
+  useEffect(() => {
+    let cancelled = false;
+    fetchAPI("/admin/audit-logs?limit=40")
+      .then((rows: Parameters<typeof mapBackendAuditRow>[0][]) => {
+        if (cancelled || !Array.isArray(rows) || rows.length === 0) return;
+        setAuditLog(rows.map(mapBackendAuditRow));
+        setAuditIsLive(true);
+      })
+      .catch(() => { /* fallback log already in place */ });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const tick = () => setLiveTime(new Date().toLocaleTimeString("en-IN", { hour12: false }));
@@ -211,7 +283,13 @@ export default function ExplainabilityPage() {
     ];
   }, [selectedDistrict]);
 
-  const filteredLog = logFilter === "all" ? AUDIT_LOG : AUDIT_LOG.filter(e => e.action === logFilter);
+  const logActions = useMemo(() => {
+    const seen = new Set<string>();
+    auditLog.forEach(e => seen.add(e.action));
+    return ["all", ...Array.from(seen).sort()];
+  }, [auditLog]);
+
+  const filteredLog = logFilter === "all" ? auditLog : auditLog.filter(e => e.action === logFilter);
 
   function cellIntensity(val: number, max: number) {
     const r = val / max;
@@ -756,11 +834,24 @@ export default function ExplainabilityPage() {
                   <Terminal className="h-5 w-5 text-brand-green" />
                   {t("Audit & Compliance Log")}
                 </span>
+                {auditIsLive && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-teal">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-teal opacity-60" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-teal" />
+                    </span>
+                    {t("Live")}
+                  </span>
+                )}
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("Timestamped data operations log for law enforcement accountability.")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {auditIsLive
+                  ? t("Persistent audit trail from the backend database — every AI answer and data access is recorded.")
+                  : t("Timestamped data operations log for law enforcement accountability.")}
+              </p>
               {/* Filter chips */}
               <div className="flex gap-1.5 mt-3 flex-wrap">
-                {(["all", "QUERY", "COMPUTE", "RENDER"] as const).map(f => (
+                {logActions.map(f => (
                   <button
                     key={f}
                     onClick={() => setLogFilter(f)}

@@ -2,15 +2,8 @@ const API_BASE = "http://localhost:8000/api/v1";
 
 let cachedToken: string | null = null;
 
-async function getToken() {
-  if (cachedToken) return cachedToken;
-  if (typeof window !== "undefined") {
-    cachedToken = localStorage.getItem("auth_token");
-    if (cachedToken) return cachedToken;
-  }
-
+async function performLogin() {
   try {
-    // Auto-login as admin for the dashboard integration
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -34,8 +27,17 @@ async function getToken() {
   return null;
 }
 
+async function getToken() {
+  if (cachedToken) return cachedToken;
+  if (typeof window !== "undefined") {
+    cachedToken = localStorage.getItem("auth_token");
+    if (cachedToken) return cachedToken;
+  }
+  return performLogin();
+}
+
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
-  const token = await getToken();
+  let token = await getToken();
   
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -46,10 +48,28 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  let res = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers,
   });
+
+  if (res.status === 401) {
+    // Clear invalid token
+    cachedToken = null;
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+    }
+    
+    // Attempt re-login
+    token = await performLogin();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers,
+      });
+    }
+  }
 
   if (!res.ok) {
     throw new Error(`API Error: ${res.status} ${res.statusText}`);
@@ -57,3 +77,4 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
   return res.json();
 }
+

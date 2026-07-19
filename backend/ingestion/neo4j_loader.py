@@ -13,7 +13,12 @@ class Neo4jLoader:
 
     def connect(self):
         try:
-            self.driver = GraphDatabase.driver(self.uri, auth=(self.username, self.password))
+            self.driver = GraphDatabase.driver(
+                self.uri,
+                auth=(self.username, self.password),
+                max_connection_lifetime=200,
+                keep_alive=True
+            )
             logger.info("Connected to Neo4j successfully.")
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {e}")
@@ -58,22 +63,28 @@ class Neo4jLoader:
                 )
                 
             # Create RECORDED_CRIME relationships
-            rels_created = 0
+            relations = []
             for index, row in df.iterrows():
                 dist_id = row['District'].replace(" ", "_").lower()
                 for head in crime_heads:
                     val = row.get(head, 0)
                     if pd.notna(val) and val > 0:
                         cat_id = head.replace(" ", "_").lower()
-                        session.execute_write(
-                            self._create_crime_relation,
-                            dist_id,
-                            cat_id,
-                            2026,
-                            1,
-                            int(val)
-                        )
-                        rels_created += 1
+                        relations.append({
+                            "dist_id": dist_id,
+                            "cat_id": cat_id,
+                            "year": 2026,
+                            "month": 1,
+                            "count": int(val)
+                        })
+            
+            # Write relationships in batches
+            rels_created = 0
+            batch_size = 200
+            for i in range(0, len(relations), batch_size):
+                batch = relations[i:i+batch_size]
+                session.execute_write(self._create_crime_relations_batch, batch)
+                rels_created += len(batch)
                         
             logger.info(f"Successfully created {rels_created} RECORDED_CRIME relationships in Neo4j.")
 
@@ -84,11 +95,12 @@ class Neo4jLoader:
         tx.run(query, id_val=id_val, **properties)
 
     @staticmethod
-    def _create_crime_relation(tx, dist_id, cat_id, year, month, count):
+    def _create_crime_relations_batch(tx, batch):
         query = """
-        MATCH (d:District {district_id: $dist_id})
-        MATCH (c:CrimeCategory {category_id: $cat_id})
-        MERGE (d)-[r:RECORDED_CRIME {year: $year, month: $month}]->(c)
-        SET r.count = $count, r.is_synthetic = false
+        UNWIND $batch AS item
+        MATCH (d:District {district_id: item.dist_id})
+        MATCH (c:CrimeCategory {category_id: item.cat_id})
+        MERGE (d)-[r:RECORDED_CRIME {year: item.year, month: item.month}]->(c)
+        SET r.count = item.count, r.is_synthetic = false
         """
-        tx.run(query, dist_id=dist_id, cat_id=cat_id, year=year, month=month, count=count)
+        tx.run(query, batch=batch)

@@ -1,14 +1,30 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import * as motion from "motion/react-client";
 import { AnimatePresence } from "motion/react";
-import { Network, Users, MapPin, CreditCard, AlertTriangle, Search, X, ChevronRight, Shield, Eye } from "lucide-react";
+import { Network, Users, MapPin, CreditCard, AlertTriangle, Search, X, ChevronRight, Shield, Eye, Loader2 } from "lucide-react";
 import { brandColors } from "@/lib/design-tokens";
-import { networkNodes, networkEdges, type NetworkNode, type NetworkEdge } from "@/data/intelligenceData";
+import { fetchAPI } from "@/lib/apiClient";
 import { useLanguage } from "@/components/LanguageContext";
+import NetworkGraph from "@/components/NetworkGraph";
+
+export interface NetworkNode {
+  id: string;
+  name: string;
+  type: "accused" | "victim" | "location" | "account";
+  group: number;
+  risk: "high" | "medium" | "low";
+  firCount: number;
+}
+
+export interface NetworkEdge {
+  source: string;
+  target: string;
+  type: "co-accused" | "shared-location" | "transaction" | "victim-link";
+}
 
 const typeConfig: Record<string, { color: string; icon: any; label: string }> = {
   accused: { color: brandColors.customRed, icon: Users, label: "Accused" },
@@ -36,18 +52,118 @@ export default function NetworkPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [networkNodes, setNetworkNodes] = useState<NetworkNode[]>([]);
+  const [networkEdges, setNetworkEdges] = useState<NetworkEdge[]>([]);
+
+  useEffect(() => {
+    const loadGraph = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchAPI("/network/full?node_limit=150&edge_limit=400");
+        
+        const mappedNodes: NetworkNode[] = (data.nodes || []).map((n: any) => {
+          let type: "accused" | "victim" | "location" | "account" = "location";
+          if (n.label === "Person") {
+            type = n.properties?.role === "victim" ? "victim" : "accused";
+          } else if (n.label === "Account" || n.label === "BankAccount") {
+            type = "account";
+          } else if (n.label === "Location" || n.label === "FIR") {
+            type = "location";
+          }
+
+          let risk: "high" | "medium" | "low" = "low";
+          const riskScore = n.properties?.risk_score || 0;
+          if (riskScore > 70) risk = "high";
+          else if (riskScore > 40) risk = "medium";
+
+          return {
+            id: n.id,
+            name: n.properties?.name || n.id,
+            type,
+            group: 0, // assigned below from real graph connectivity
+            risk,
+            firCount: n.properties?.fir_count || 1
+          };
+        });
+
+        const mappedEdges: NetworkEdge[] = (data.edges || []).map((e: any) => {
+          let type: "co-accused" | "shared-location" | "transaction" | "victim-link" = "co-accused";
+          if (e.type === "CO_ACCUSED") {
+            type = "co-accused";
+          } else if (e.type === "IN_DISTRICT" || e.type === "SHARED_LOCATION" || e.type === "INVOLVED_IN") {
+            type = "shared-location";
+          } else if (e.type === "HOLDS" || e.type === "TRANSFERRED_TO") {
+            type = "transaction";
+          } else {
+            type = "victim-link";
+          }
+
+          return {
+            source: e.source,
+            target: e.target,
+            type
+          };
+        });
+
+        // Assign groups from real graph connectivity (connected components),
+        // so "Detected Clusters" reflects actual linked subnetworks.
+        const parent: Record<string, string> = {};
+        const find = (x: string): string => {
+          parent[x] ??= x;
+          while (parent[x] !== x) {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
+          }
+          return x;
+        };
+        mappedNodes.forEach((n) => find(n.id));
+        mappedEdges.forEach((e) => {
+          const ra = find(e.source);
+          const rb = find(e.target);
+          if (ra !== rb) parent[ra] = rb;
+        });
+        const rootToGroup: Record<string, number> = {};
+        const componentSizes: Record<string, number> = {};
+        mappedNodes.forEach((n) => {
+          const root = find(n.id);
+          componentSizes[root] = (componentSizes[root] || 0) + 1;
+        });
+        // Number groups largest-first: G1 = biggest cluster.
+        Object.keys(componentSizes)
+          .sort((a, b) => componentSizes[b] - componentSizes[a])
+          .forEach((root, i) => {
+            rootToGroup[root] = i + 1;
+          });
+        mappedNodes.forEach((n) => {
+          n.group = rootToGroup[find(n.id)];
+        });
+
+        setNetworkNodes(mappedNodes);
+        setNetworkEdges(mappedEdges);
+      } catch (err: any) {
+        console.error("Failed to load network graph:", err);
+        setError(err.message || "Failed to query Neo4j graph data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadGraph();
+  }, []);
+
   const filteredNodes = useMemo(() => {
     return networkNodes.filter((n) => {
       const matchesSearch = !searchQuery || n.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesType = !filterType || n.type === filterType;
       return matchesSearch && matchesType;
     });
-  }, [searchQuery, filterType]);
+  }, [searchQuery, filterType, networkNodes]);
 
   const connectedEdges = useMemo(() => {
     if (!selectedNode) return [];
     return networkEdges.filter((e) => e.source === selectedNode.id || e.target === selectedNode.id);
-  }, [selectedNode]);
+  }, [selectedNode, networkEdges]);
 
   const connectedNodes = useMemo(() => {
     if (!selectedNode) return [];
@@ -56,55 +172,49 @@ export default function NetworkPage() {
       connectedIds.add(e.source === selectedNode.id ? e.target : e.source);
     });
     return networkNodes.filter((n) => connectedIds.has(n.id));
-  }, [selectedNode, connectedEdges]);
+  }, [selectedNode, connectedEdges, networkNodes]);
 
-  // Cluster stats
+  // Cluster stats — real connected components, largest first.
   const clusters = useMemo(() => {
     const groups: Record<number, NetworkNode[]> = {};
     networkNodes.forEach((n) => {
       if (!groups[n.group]) groups[n.group] = [];
       groups[n.group].push(n);
     });
-    return Object.entries(groups).map(([id, nodes]) => ({
-      id: Number(id),
-      count: nodes.length,
-      accusedCount: nodes.filter((n) => n.type === "accused").length,
-      highRiskCount: nodes.filter((n) => n.risk === "high").length,
-    }));
-  }, []);
+    return Object.entries(groups)
+      .map(([id, nodes]) => ({
+        id: Number(id),
+        count: nodes.length,
+        accusedCount: nodes.filter((n) => n.type === "accused").length,
+        highRiskCount: nodes.filter((n) => n.risk === "high").length,
+      }))
+      .filter((c) => c.count >= 3)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [networkNodes]);
 
-  const totalAccused = networkNodes.filter((n) => n.type === "accused").length;
-  const highRiskCount = networkNodes.filter((n) => n.risk === "high").length;
+  const totalAccused = useMemo(() => networkNodes.filter((n) => n.type === "accused").length, [networkNodes]);
+  const highRiskCount = useMemo(() => networkNodes.filter((n) => n.risk === "high").length, [networkNodes]);
 
-  // Simple force-directed-style positions for the network graph
-  const nodePositions = useMemo(() => {
-    const positions: Record<string, { x: number; y: number }> = {};
-    const clusterCenters: Record<number, { x: number; y: number }> = {
-      1: { x: 200, y: 180 },
-      2: { x: 550, y: 150 },
-      3: { x: 400, y: 380 },
-      4: { x: 150, y: 400 },
-    };
-    
-    const grouped: Record<number, NetworkNode[]> = {};
-    networkNodes.forEach((n) => {
-      if (!grouped[n.group]) grouped[n.group] = [];
-      grouped[n.group].push(n);
-    });
-    
-    Object.entries(grouped).forEach(([grp, nodes]) => {
-      const center = clusterCenters[Number(grp)] || { x: 350, y: 280 };
-      const radius = 70 + nodes.length * 8;
-      nodes.forEach((node, i) => {
-        const angle = (2 * Math.PI * i) / nodes.length - Math.PI / 2;
-        positions[node.id] = {
-          x: center.x + radius * Math.cos(angle),
-          y: center.y + radius * Math.sin(angle),
-        };
-      });
-    });
-    return positions;
-  }, []);
+  if (loading) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center min-h-[600px]">
+        <Loader2 className="h-10 w-10 text-brand-red animate-spin mb-4" />
+        <h2 className="text-xl font-heading font-bold text-foreground">{t("Analyzing Criminal Networks...")}</h2>
+        <p className="text-muted-foreground text-sm mt-2">{t("Fetching co-offending ties and location hubs from Neo4j")}</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col items-center justify-center min-h-[600px]">
+        <AlertTriangle className="h-10 w-10 text-brand-red mb-4" />
+        <h2 className="text-xl font-heading font-bold text-foreground">{t("Network Intel Unavailable")}</h2>
+        <p className="text-muted-foreground text-sm mt-2 max-w-md text-center">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
@@ -161,86 +271,17 @@ export default function NetworkPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="relative w-full h-[520px] bg-gradient-to-br from-muted/10 to-muted/5 overflow-hidden">
-                {/* SVG Edges */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 750 520" preserveAspectRatio="none">
-                  {networkEdges.map((edge, i) => {
-                    const from = nodePositions[edge.source];
-                    const to = nodePositions[edge.target];
-                    if (!from || !to) return null;
-                    const isHighlighted = selectedNode && (edge.source === selectedNode.id || edge.target === selectedNode.id);
-                    return (
-                      <line
-                        key={i}
-                        x1={from.x} y1={from.y}
-                        x2={to.x} y2={to.y}
-                        stroke={isHighlighted ? brandColors.customRed : "var(--border)"}
-                        strokeWidth={isHighlighted ? 2.5 : 1}
-                        strokeOpacity={selectedNode ? (isHighlighted ? 0.9 : 0.1) : 0.3}
-                        strokeDasharray={edge.type === "transaction" ? "6 3" : undefined}
-                      />
-                    );
-                  })}
-                </svg>
-
-                {/* Nodes */}
-                {networkNodes.map((node) => {
-                  const pos = nodePositions[node.id];
-                  if (!pos) return null;
-                  const cfg = typeConfig[node.type];
-                  const isSelected = selectedNode?.id === node.id;
-                  const isConnected = selectedNode && connectedNodes.some((n) => n.id === node.id);
-                  const isDimmed = selectedNode && !isSelected && !isConnected;
-                  const size = node.type === "accused" ? (node.risk === "high" ? 22 : 18) : 16;
-
-                  return (
-                    <motion.button
-                      key={node.id}
-                      className="absolute flex items-center justify-center rounded-full border-2 transition-all cursor-pointer z-10"
-                      style={{
-                        left: `${(pos.x / 750) * 100}%`,
-                        top: `${(pos.y / 520) * 100}%`,
-                        width: size * 2,
-                        height: size * 2,
-                        marginLeft: -size,
-                        marginTop: -size,
-                        backgroundColor: cfg.color,
-                        borderColor: isSelected ? "#fff" : cfg.color,
-                        opacity: isDimmed ? 0.15 : 1,
-                        boxShadow: isSelected ? `0 0 20px ${cfg.color}` : 'none',
-                      }}
-                      whileHover={{ scale: 1.3 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedNode(isSelected ? null : node)}
-                      title={node.name}
-                    >
-                      <cfg.icon className="text-white" style={{ width: size * 0.7, height: size * 0.7 }} />
-                    </motion.button>
-                  );
-                })}
-
-                {/* Node labels for accused */}
-                {networkNodes.filter(n => n.type === "accused").map((node) => {
-                  const pos = nodePositions[node.id];
-                  if (!pos) return null;
-                  const isDimmed = selectedNode && selectedNode.id !== node.id && !connectedNodes.some(n => n.id === node.id);
-                  return (
-                    <div
-                      key={`label-${node.id}`}
-                      className="absolute text-[10px] font-bold text-foreground whitespace-nowrap pointer-events-none"
-                      style={{
-                        left: `${(pos.x / 750) * 100}%`,
-                        top: `${(pos.y / 520) * 100}%`,
-                        transform: "translate(-50%, 28px)",
-                        opacity: isDimmed ? 0.1 : 0.8,
-                      }}
-                    >
-                      {node.name.split(" ")[0]}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
+               <div className="relative w-full bg-gradient-to-br from-muted/10 to-muted/5 overflow-hidden">
+                 <NetworkGraph
+                   nodes={networkNodes}
+                   edges={networkEdges}
+                   selectedNode={selectedNode}
+                   onSelectNode={setSelectedNode}
+                   searchQuery={searchQuery}
+                   filterType={filterType}
+                 />
+               </div>
+             </CardContent>
           </Card>
         </motion.div>
 

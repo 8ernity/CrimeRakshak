@@ -10,7 +10,7 @@ import {
   Fingerprint, AlertTriangle, Search, ChevronRight, Clock, MapPin, Shield,
   ArrowLeft, Activity, User, Ruler, Weight, Eye, Home, BadgeCheck, FileText,
   Scale, Gavel, Users, Phone, Sparkles, Brain, BookOpen, Briefcase, Droplet,
-  FolderOpen, SortDesc
+  FolderOpen, SortDesc, CheckCheck
 } from "lucide-react";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -533,6 +533,83 @@ function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Explainable AI: Risk Computation Reasoning */}
+      <div className="mt-6">
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 1.1 }}>
+          <Card className="glass-card hover:!transform-none">
+            <CardHeader className="pb-3 border-b border-border/50 bg-muted/10">
+              <CardTitle className="text-lg font-heading flex items-center gap-2">
+                <Search className="h-5 w-5 text-brand-purple" /> {t("Risk Computation Reasoning")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-x-10 gap-y-6">
+                {[
+                  {
+                    step: 1, icon: FileText,
+                    label: "Historical Baseline",
+                    value: `${o.totalFIRs} Total FIRs · ${o.convictions} Convictions`,
+                    detail: `Foundational risk weight derived from raw case volume and conviction history.`,
+                  },
+                  {
+                    step: 2, icon: Activity,
+                    label: "Behavioral Multipliers",
+                    value: o.isHabitual ? "Habitual Offender (+20%)" : "First-time/Occasional (+0%)",
+                    detail: `Status multiplier applied based on habitual offender registry and recidivism patterns.`,
+                  },
+                  {
+                    step: 3, icon: Shield,
+                    label: "Flight Risk & Status",
+                    value: `Current Status: ${t(o.status)}`,
+                    detail: `Absconding adds severe penalty (+35%). Active/On-Bail adds moderate weight.`,
+                  },
+                  {
+                    step: 4, icon: Brain,
+                    label: "Psychometric Factors",
+                    value: `Aggression, Impulsivity, Sophistication`,
+                    detail: `AI model dynamically adjusts score based on trait severity (+/- 15%).`,
+                  },
+                ].map((s, i, arr) => (
+                  <div key={s.step} className="flex gap-3 mb-0">
+                    <div className="flex flex-col items-center">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 z-10" style={{ background: `linear-gradient(135deg, ${brandColors.purple}, ${brandColors.blue})` }}>
+                        {s.step}
+                      </div>
+                      {i < arr.length - 1 && i !== 1 && i !== 3 && (
+                        <div className="w-px flex-1 mt-1 min-h-[32px]" style={{ background: `linear-gradient(${brandColors.purple}50, transparent)` }} />
+                      )}
+                    </div>
+                    <div className="pb-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <s.icon className="h-3.5 w-3.5 flex-shrink-0" style={{ color: brandColors.teal }} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t(s.label)}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-foreground leading-snug">{t(s.value)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t(s.detail)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-4 rounded-2xl border border-brand-purple/20 bg-brand-purple/5 flex flex-wrap items-center gap-4">
+                <div className="p-2.5 rounded-xl bg-brand-purple/10">
+                  <CheckCheck className="h-5 w-5 text-brand-purple" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Final Output</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {o.name} → Live Computed Risk Score:{" "}
+                    <span className="text-brand-purple font-bold">{liveRiskScore}/100</span>
+                  </p>
+                </div>
+                <div className="ml-auto text-right hidden sm:block">
+                  <p className="text-[10px] font-mono text-muted-foreground/60">/api/analytics/risk-score</p>
+                </div>
               </div>
             </CardContent>
           </Card>

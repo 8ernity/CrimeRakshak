@@ -4,11 +4,14 @@
 
 import { districts, ipcCrimes, stateTotals } from "@/data/crimeData";
 import { getTopDistricts, getSafestDistricts, getRiskTier, getMonthOverMonthChange } from "@/lib/derive";
+import type { TraceStep } from "@/components/ReasoningTrail";
 
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  sources?: string[];
+  trace?: TraceStep[];
 }
 
 export const examplePrompts = [

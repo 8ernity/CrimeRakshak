@@ -100,7 +100,11 @@ def seed() -> None:
             db.commit()
             logger.info("Created initial superuser: %s", username)
         else:
-            logger.info("Superuser '%s' already exists; skipping.", username)
+            existing.password_hash = hash_password(password)
+            existing.is_active = True
+            existing.is_superuser = True
+            db.commit()
+            logger.info("Superuser '%s' password and settings synchronized.", username)
 
         logger.info("Seeding complete.")
     except Exception:

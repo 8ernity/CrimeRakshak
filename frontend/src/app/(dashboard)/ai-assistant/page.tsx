@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { examplePrompts, type ChatMessage } from "@/lib/chat-engine";
+import ReasoningTrail, { type TraceStep } from "@/components/ReasoningTrail";
 import { useLanguage } from "@/components/LanguageContext";
 import { speak, stopSpeaking, listen, isSpeechRecognitionSupported } from "@/lib/voice";
 import * as motion from "motion/react-client";
@@ -95,7 +96,7 @@ export default function AIAssistantPage() {
     return () => stopSpeaking();
   }, []);
 
-  async function callChat(message: string): Promise<{ answer: string; sources: string[] }> {
+  async function callChat(message: string): Promise<{ answer: string; sources: string[]; trace: TraceStep[] }> {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -108,7 +109,7 @@ export default function AIAssistantPage() {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
     conversationId.current = data.conversation_id ?? conversationId.current;
-    return { answer: data.answer ?? "(no answer)", sources: data.sources ?? [] };
+    return { answer: data.answer ?? "(no answer)", sources: data.sources ?? [], trace: data.trace ?? [] };
   }
 
   const handleSend = async (query?: string) => {
@@ -123,9 +124,9 @@ export default function AIAssistantPage() {
     setLoading(true);
 
     try {
-      const { answer } = await callChat(q);
+      const { answer, sources, trace } = await callChat(q);
       let content = answer;
-      const assistantMsg: ChatMessage = { role: "assistant", content, timestamp: new Date() };
+      const assistantMsg: ChatMessage = { role: "assistant", content, sources, trace, timestamp: new Date() };
       const finalMessages = [...updatedMessages, assistantMsg];
       
       setMessages(finalMessages);
@@ -358,13 +359,21 @@ export default function AIAssistantPage() {
                     {msg.content === GREETING ? t(GREETING) : msg.content}
                   </div>
                   {msg.role === "assistant" && (
-                    <button
-                      onClick={() => handleListen(i, msg.content)}
-                      className="text-xs text-brand-purple hover:underline flex items-center gap-1 px-1"
-                    >
-                      {speakingIdx === i ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                      {speakingIdx === i ? t("Stop") : t("Listen")}
-                    </button>
+                    <div className="px-1 mt-1 space-y-1">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <button
+                          onClick={() => handleListen(i, msg.content)}
+                          className="text-xs text-brand-purple hover:underline flex items-center gap-1"
+                        >
+                          {speakingIdx === i ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+                          {speakingIdx === i ? t("Stop") : t("Listen")}
+                        </button>
+                      </div>
+
+                      {msg.trace && msg.trace.length > 0 && (
+                        <ReasoningTrail trace={msg.trace} t={t} />
+                      )}
+                    </div>
                   )}
                 </div>
                 {msg.role === "user" && (

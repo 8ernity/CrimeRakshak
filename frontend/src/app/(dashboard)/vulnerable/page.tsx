@@ -53,13 +53,13 @@ export default function VulnerablePage() {
     change: sub.sharePct
   }));
 
-  const childData = childGroup.subCategories.map((sub: any) => ({
+  const childData: { name: string; value: number }[] = childGroup.subCategories.map((sub: any) => ({
     name: t(sub.name),
     value: sub.cases
   }));
   const totalChildren = childGroup.totalCases;
 
-  const scstData = scstGroup.subCategories.map((sub: any) => ({
+  const scstData: { name: string; value: number }[] = scstGroup.subCategories.map((sub: any) => ({
     name: t(sub.name),
     value: sub.cases
   }));

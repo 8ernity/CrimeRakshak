@@ -17,6 +17,7 @@ from app.chat.data.query import run_query, UnsafeQueryError
 from app.chat.data.schema_card import generate_schema_card
 from app.chat.data.loader import build_database
 from app.chat import decision_tools
+from app.chat import graph_tools
 
 
 @lru_cache
@@ -160,6 +161,69 @@ TOOL_SPECS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "case_summary",
+            "description": (
+                "Get a comprehensive case summary for an FIR (by fir_id). "
+                "Returns the accused, victims, witnesses, crime category and location of the case."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"fir_id": {"type": "string", "description": "The FIR ID/Number (e.g. FIR-2024-1002)."}},
+                "required": ["fir_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "investigation_timeline",
+            "description": (
+                "Get the investigation timeline for an FIR (by fir_id). "
+                "Provides chronological milestones and links to prior criminal records of the accused."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"fir_id": {"type": "string", "description": "The FIR ID/Number."}},
+                "required": ["fir_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "similar_cases",
+            "description": (
+                "Identify similar past cases to a given FIR (by fir_id). "
+                "Finds and ranks related cases sharing similar accused profiles or crime categories."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fir_id": {"type": "string", "description": "The FIR ID/Number."},
+                    "limit": {"type": "integer", "description": "Maximum number of similar cases to return (default 10)."}
+                },
+                "required": ["fir_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "suggest_leads",
+            "description": (
+                "Generate actionable investigative leads for a given FIR (by fir_id). "
+                "Recommends associates of the accused or persons sharing phone numbers/bank accounts who are not yet named in the case."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"fir_id": {"type": "string", "description": "The FIR ID/Number."}},
+                "required": ["fir_id"],
+            },
+        },
+    },
 ]
 
 TOOL_IMPLS = {
@@ -169,6 +233,10 @@ TOOL_IMPLS = {
     "rising_crimes": decision_tools.rising_crimes,
     "crime_trend": decision_tools.crime_trend,
     "disposal_analysis": decision_tools.disposal_analysis,
+    "case_summary": graph_tools.case_summary,
+    "investigation_timeline": graph_tools.investigation_timeline,
+    "similar_cases": graph_tools.similar_cases,
+    "suggest_leads": graph_tools.suggest_leads,
 }
 
 

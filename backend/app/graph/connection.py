@@ -107,6 +107,8 @@ class Neo4jConnectionManager:
                 auth=(self._user, self._password),
                 max_connection_pool_size=50,
                 connection_acquisition_timeout=30,
+                max_connection_lifetime=200,  # Recycles idle connections before Aura drops them
+                keep_alive=True,               # Sends periodic pings to keep sockets open
             )
             logger.info("Neo4j driver initialized for %s", self._uri)
         except Exception as exc:  # pragma: no cover - driver init rarely fails

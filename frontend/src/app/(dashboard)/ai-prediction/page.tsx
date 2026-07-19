@@ -9,10 +9,10 @@ import { runPrediction, type PredictionInput, type PredictionResult } from "@/li
 import { fetchAPI } from "@/lib/apiClient";
 import * as motion from "motion/react-client";
 import { AnimatePresence } from "motion/react";
-import {
-  Brain, AlertTriangle, Target, BarChart3, Activity, Calendar, Zap, Sparkles,
-  Loader2, Cpu, Network, CloudLightning, Crosshair, MapPin, ShieldAlert,
-  ShieldCheck, Server, Eye, Terminal, ChevronRight
+import { 
+  Brain, Target, Activity, MapPin, AlertTriangle, Cpu, TrendingUp, Calendar, 
+  BarChart3, Zap, Filter, Loader2, Sparkles, Server, Crosshair, ShieldCheck,
+  Terminal, ChevronRight, Download, Search, Database, CloudRain, Network
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { brandColors } from "@/lib/design-tokens";
@@ -75,7 +75,8 @@ export default function AIPredictionPage() {
       let logIndex = 0;
       interval = setInterval(() => {
         if (logIndex < simLogs.length) {
-          setLogs(prev => [...prev, simLogs[logIndex]]);
+          const currentLog = simLogs[logIndex];
+          setLogs(prev => [...prev, currentLog]);
           logIndex++;
         }
       }, 150);
@@ -347,7 +348,7 @@ export default function AIPredictionPage() {
                     {logs.map((log, index) => (
                       <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex gap-3 text-brand-teal/80">
                         <span className="text-muted-foreground/50 opacity-50">[{new Date().toISOString().split('T')[1].substring(0,8)}]</span>
-                        <span className={log.includes("ERROR") ? "text-brand-red" : log.includes("COMPLETE") ? "text-brand-purple font-bold" : ""}>{log}</span>
+                        <span className={log?.includes("ERROR") ? "text-brand-red" : log?.includes("COMPLETE") ? "text-brand-purple font-bold" : ""}>{log}</span>
                       </motion.div>
                     ))}
                     <div className="flex items-center gap-2 text-brand-purple mt-4">
@@ -581,6 +582,45 @@ export default function AIPredictionPage() {
                   </motion.div>
 
                 </div>
+
+                {/* Explainable AI: Model Reasoning Trail */}
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }} className="mt-6">
+                  <Card className="glass-card hover:!transform-none">
+                    <CardHeader className="pb-3 border-b border-border/50 bg-muted/10">
+                      <CardTitle className="text-lg font-heading flex items-center gap-2">
+                        <Search className="h-5 w-5 text-brand-purple" /> {t("Model Reasoning Trail")}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col space-y-4">
+                        {[
+                          { step: 1, label: "Baseline Data Ingestion", desc: `Loaded ${meta?.trainingMonths || 60} months of historical ${crimeType} data for ${district}.`, icon: Database },
+                          { step: 2, label: "Spatial & Trend Weighting", desc: `Applied recent velocity trend factor (${result.factors.trend.toFixed(2)}x) and district spatial risk (${result.factors.district.toFixed(2)}x).`, icon: MapPin },
+                          { step: 3, label: "Environmental Multipliers", desc: `Adjusted for seasonal bias and weather patterns (${result.factors.environmental.toFixed(2)}x).`, icon: CloudRain },
+                          { step: 4, label: `${modelType} Engine Forecast`, desc: `Ran ${modelType} architecture to generate future horizon with ${result.confidence}% confidence bounds.`, icon: Network },
+                        ].map((s, i, arr) => (
+                          <div key={s.step} className="flex gap-4 items-start">
+                            <div className="flex flex-col items-center">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white z-10 flex-shrink-0" style={{ background: `linear-gradient(135deg, var(--brand-purple), var(--brand-blue))` }}>
+                                {s.step}
+                              </div>
+                              {i < arr.length - 1 && (
+                                <div className="w-px h-full bg-border my-1 min-h-[20px]" style={{ background: `linear-gradient(var(--brand-purple)50, transparent)` }} />
+                              )}
+                            </div>
+                            <div className="pb-2 flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <s.icon className="h-4 w-4 text-brand-teal" />
+                                <span className="font-semibold text-foreground leading-snug">{t(s.label)}</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed">{t(s.desc)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>

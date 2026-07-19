@@ -12,7 +12,7 @@ echo [1] Quick Start (Start databases and launch servers)
 echo [2] Full Setup + Run (Databases, deps, init DBs, ingest, seed, launch)
 echo [3] Database Setup Only (Init database schemas, run ingestion and seed)
 echo [4] Start Application Servers Only (FastAPI backend + Next.js frontend)
-echo [5] Install / Update Python Dependencies (incl. ML: xgboost, statsmodels, torch)
+echo [5] Install / Update Dependencies (Python incl. ML + frontend npm packages)
 echo [6] Stop Databases (docker-compose down)
 echo [7] Exit
 echo.
@@ -86,6 +86,7 @@ if %ERRORLEVEL% neq 0 (
     echo [WARNING] Data ingestion pipeline failed. Moving forward...
 )
 
+call :doduck
 cd /d "%~dp0"
 goto startservers
 
@@ -118,11 +119,30 @@ python ingest.py
 if %ERRORLEVEL% neq 0 (
     echo [WARNING] Data ingestion pipeline failed.
 )
+call :doduck
 cd /d "%~dp0"
 echo.
 echo Database setup completed successfully!
 pause
 goto menu
+
+:: Subroutine: synthetic case data + DuckDB analytics database.
+:: Run from backend dir with venv active. Powers chat, analytics, network,
+:: forecasting AND the financial-crime module (case_transactions).
+:doduck
+echo.
+echo === Generating Synthetic Case Data (cases, people, accounts, transactions) ===
+python -m app.chat.data.case_generator
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] Synthetic case generation failed.
+)
+echo.
+echo === Building DuckDB Analytics Database (crime_stats.duckdb, 13 tables) ===
+python -m app.chat.data.loader
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] DuckDB build failed - chat/analytics/financial APIs may 503.
+)
+exit /b 0
 
 :installdeps
 call :dodeps
@@ -136,6 +156,7 @@ pause
 goto menu
 
 :: Subroutine: install backend requirements + optional CPU torch for the LSTM engine
+:: + frontend npm packages (incl. react-force-graph-2d for the network graph)
 :dodeps
 echo.
 echo === Installing Python Dependencies (backend/requirements.txt) ===
@@ -152,6 +173,14 @@ python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 if %ERRORLEVEL% neq 0 (
     echo [WARNING] PyTorch install failed. The LSTM model will fall back to a sklearn MLP.
 )
+echo.
+echo === Installing Frontend Dependencies (npm install) ===
+cd /d "%~dp0frontend"
+call npm install
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] npm install failed - the Criminal Network graph page needs
+    echo           react-force-graph-2d and d3-force-3d to render.
+)
 cd /d "%~dp0"
 exit /b 0
 
@@ -164,6 +193,44 @@ if %ERRORLEVEL% neq 0 (
     echo           Run option [5] to install them, then restart the servers.
 ) else (
     echo ML dependencies OK.
+)
+
+echo === Preflight: DuckDB analytics data ===
+"%~dp0backend\venv\Scripts\python.exe" -c "import duckdb; con = duckdb.connect(r'%~dp0backend\crime_stats.duckdb', read_only=True); con.execute('SELECT 1 FROM case_transactions LIMIT 1'); con.close()" >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo [WARNING] crime_stats.duckdb missing or lacks case_transactions -
+    echo           chat/analytics/financial APIs will return 503.
+    echo           Run option [3] Database Setup to build it.
+) else (
+    echo DuckDB data OK - financial transaction ledger present.
+)
+
+echo === Preflight: Synthetic case CSVs (Case Intelligence data) ===
+if exist "%~dp0datasets\synthetic_cases\cases.csv" (
+    if exist "%~dp0datasets\synthetic_cases\case_people.csv" (
+        echo Case CSVs OK - FIR profiles, timelines, similar cases and leads available.
+    ) else (
+        echo [WARNING] case_people.csv missing - Case Intelligence panels will be empty.
+        echo           Run option [3] Database Setup to regenerate synthetic cases.
+    )
+) else (
+    echo [WARNING] datasets\synthetic_cases\cases.csv missing -
+    echo           /graph/firs/list and /graph/fir/{id} fall back to bare Neo4j
+    echo           stubs and the Case Intelligence page will look empty.
+    echo           Run option [3] Database Setup to generate them.
+)
+
+echo === Preflight: Frontend network-graph dependencies ===
+if exist "%~dp0frontend\node_modules\react-force-graph-2d" (
+    if exist "%~dp0frontend\node_modules\d3-force-3d" (
+        echo Frontend graph libraries OK - react-force-graph-2d + d3-force-3d present.
+    ) else (
+        echo [WARNING] d3-force-3d missing - the Criminal Network page will not compile.
+        echo           Run option [5] Install Dependencies to fix.
+    )
+) else (
+    echo [WARNING] react-force-graph-2d missing - the Criminal Network page will not compile.
+    echo           Run option [5] Install Dependencies to fix.
 )
 
 echo.
@@ -179,6 +246,20 @@ echo - Backend:        http://localhost:8000
 echo - Frontend:       http://localhost:3000
 echo - Forecast API:   POST http://localhost:8000/api/v1/predict
 echo - Early Warning:  GET  http://localhost:8000/api/v1/predict/early-warning
+echo - Financial API:  GET  http://localhost:8000/api/v1/financial/suspicious
+echo - Money Trail:    GET  http://localhost:8000/api/v1/financial/money-trail
+echo - Network Graph:  GET  http://localhost:8000/api/v1/network/full  (Criminal Network page)
+echo - Case Intel:     GET  http://localhost:8000/api/v1/graph/firs/list  (CSV-backed, 1200 FIRs)
+echo - Chat + Trace:   POST http://localhost:8000/api/v1/chat  (answers include reasoning trace)
+echo - Audit Trail:    GET  http://localhost:8000/api/v1/admin/audit-logs  (Explainability page)
+echo.
+echo Explainable AI: every chat answer returns a step-by-step tool trace,
+echo is written to the persistent audit log, and is visualized on the
+echo /explainability and /ai-assistant pages.
+echo.
+echo Case Intelligence: FIR profiles, timelines, similar cases and AI leads
+echo are served from the rich synthetic case CSVs first, with Neo4j as
+echo fallback for externally ingested FIRs.
 echo.
 echo Feel free to close this menu.
 pause

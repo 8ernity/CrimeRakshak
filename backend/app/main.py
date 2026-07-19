@@ -80,6 +80,18 @@ app.include_router(predict.router, prefix=settings.API_V1_PREFIX)
 
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────
+@app.on_event("startup")
+def _startup_seed() -> None:
+    """Seed the database with default roles, permissions, and the superuser on startup."""
+    from app.seed import seed
+    try:
+        logger.info("Running automatic DB seeding on startup...")
+        seed()
+        logger.info("Automatic DB seeding completed.")
+    except Exception as e:
+        logger.error(f"Failed to auto-seed database: {e}")
+
+
 @app.on_event("shutdown")
 def _shutdown_graph() -> None:
     """Close the shared Neo4j driver cleanly on application shutdown."""
