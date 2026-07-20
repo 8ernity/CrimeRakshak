@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser, SignOutButton, UserButton } from "@clerk/nextjs";
 import {
   Shield,
   LayoutDashboard,
@@ -83,6 +84,16 @@ export function Sidebar() {
   const pathname = usePathname();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
   const { t } = useLanguage();
+  const { user } = useUser();
+
+  const name = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || "User";
+  let displayName = name;
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    displayName = `${parts[0][0].toUpperCase()}.${parts[parts.length - 1][0].toUpperCase()}`;
+  }
+  const initials = name.substring(0, 2).toUpperCase();
+  const role = (user?.publicMetadata?.role as string) || "Investigator";
 
   return (
     <>
@@ -123,7 +134,7 @@ export function Sidebar() {
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#1E40AF] to-[#3B82F6] flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(30,64,175,0.3)]">
                   <Shield className="h-4 w-4 text-white" />
                 </div>
-                <span className="brand-logo font-black text-xl tracking-tight bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] text-transparent bg-clip-text drop-shadow-sm whitespace-nowrap truncate min-w-0">
+                <span className="brand-logo font-black text-xl tracking-tight bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6] dark:from-[#F8FAFC] dark:via-[#93C5FD] dark:to-[#60A5FA] text-transparent bg-clip-text drop-shadow-sm whitespace-nowrap truncate min-w-0">
                   {t("CrimeRakshak")}
                 </span>
               </div>
@@ -193,13 +204,13 @@ export function Sidebar() {
         <div className="p-4 mt-auto">
           <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm border-2 border-background">
-                SM
+              <div className="flex-shrink-0">
+                <UserButton appearance={{ elements: { userButtonAvatarBox: "h-10 w-10 shadow-sm border-2 border-background" } }} />
               </div>
               {!collapsed && (
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-black dark:text-white truncate">Soumyadip</p>
-                  <p className="text-[10px] text-black/70 dark:text-white/60 uppercase tracking-wider font-semibold truncate">Manager</p>
+                  <p className="text-sm font-bold text-black dark:text-white truncate">{displayName}</p>
+                  <p className="text-[10px] text-black/70 dark:text-white/60 uppercase tracking-wider font-semibold truncate">{role}</p>
                 </div>
               )}
             </div>
@@ -208,9 +219,11 @@ export function Sidebar() {
                 <Link href="/settings" title={t("Settings")} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors">
                   <Settings className="h-4 w-4" />
                 </Link>
-                <button suppressHydrationWarning title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
-                  <LogOut className="h-4 w-4" />
-                </button>
+                <SignOutButton redirectUrl="/">
+                  <button suppressHydrationWarning title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </SignOutButton>
               </div>
             )}
           </div>
