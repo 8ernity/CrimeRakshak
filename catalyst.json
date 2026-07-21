@@ -1,0 +1,14 @@
+{
+  "appsail": [
+    {
+      "name": "crimerakshak-backend",
+      "source": "backend"
+    }
+  ],
+  "slate": [
+    {
+      "name": "crimerakshak-frontend",
+      "source": "frontend"
+    }
+  ]
+}
