@@ -1,0 +1,63 @@
+# =========================
+# Virtual Environments
+# =========================
+backend/.venv/
+backend/venv/
+
+# =========================
+# Frontend Dependencies & Build
+# =========================
+frontend/node_modules/
+frontend/.next/
+frontend/.clerk/
+
+# =========================
+# Python Cache
+# =========================
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+.ruff_cache/
+.mypy_cache/
+
+# =========================
+# Git & IDE
+# =========================
+.git/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# =========================
+# Environment Files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+backend/logs/
+logs/
+**/logs/
+*.log
+
+# =========================
+# Local Databases
+# =========================
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.sqlite3
+*.db
+
+# =========================
+# Jupyter Notebooks
+# =========================
+*.ipynb
