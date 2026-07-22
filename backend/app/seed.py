@@ -106,12 +106,17 @@ def seed() -> None:
             db.commit()
             logger.info("Superuser '%s' password and settings synchronized.", username)
 
-        logger.info("Seeding complete.")
-    except Exception:
-        db.rollback()
-        raise
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logger.warning("DB seeding skipped or failed (PostgreSQL unavailable): %s", e)
     finally:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

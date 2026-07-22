@@ -1,0 +1,12 @@
+{
+  "name": "crimerakshak-backend-bridge",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "python3 -m pip install -r requirements.txt || pip install -r requirements.txt"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

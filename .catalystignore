@@ -5,10 +5,9 @@ backend/.venv/
 backend/venv/
 
 # =========================
-# Frontend Dependencies & Build
+# Frontend Dependencies
 # =========================
 frontend/node_modules/
-frontend/.next/
 frontend/.clerk/
 
 # =========================
@@ -51,8 +50,9 @@ logs/
 # =========================
 # Local Databases
 # =========================
-*.duckdb
-*.duckdb.wal
+# NOTE: crime_stats.duckdb is required by the backend at runtime
+# *.duckdb
+# *.duckdb.wal
 *.sqlite
 *.sqlite3
 *.db

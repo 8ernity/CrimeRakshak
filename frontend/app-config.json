@@ -1,9 +1,11 @@
 {
-  "command": "npm run start",
-  "build_command": "npm run build",
+  "command": "node .next/standalone/server.js",
+  "build_command": "npm run build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
   "build_path": ".",
-  "stack": "node_20",
-  "env_variables": {},
+  "stack": "node20",
+  "env_variables": {
+    "NEXT_PUBLIC_API_URL": "https://crimerakshak-backend-50044226161.development.catalystappsail.in/api/v1"
+  },
   "memory": 512,
   "scripts": {}
 }
