@@ -3,7 +3,6 @@
   "version": 2,
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/.next",
-  "framework": "nextjs",
   "functions": {
     "api/index.py": {
       "memory": 1024,
