@@ -32,3 +32,5 @@ test_pg.py
 # ── OS artifacts ──
 .DS_Store
 Thumbs.db
+.vercel
+.env*

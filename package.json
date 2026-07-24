@@ -2,11 +2,5 @@
   "name": "crimerakshak",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "build": "npm --prefix frontend run build",
-    "start": "npm --prefix frontend run start"
-  },
-  "dependencies": {
-    "next": "16.2.10"
-  }
+  "comment": "Root manifest is intentionally minimal. Per-service builds are defined in vercel.json (frontend: Next.js in frontend/, backend: FastAPI via api/index.py). Do not add 'next' here or Vercel will attempt a phantom root-level Next.js build."
 }
