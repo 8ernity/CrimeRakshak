@@ -2,5 +2,8 @@
   "name": "crimerakshak",
   "version": "0.1.0",
   "private": true,
-  "comment": "Root manifest is intentionally minimal. Per-service builds are defined in vercel.json (frontend: Next.js in frontend/, backend: FastAPI via api/index.py). Do not add 'next' here or Vercel will attempt a phantom root-level Next.js build."
+  "scripts": {
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 8001",
+    "dev:frontend": "cd frontend && npm run dev"
+  }
 }
