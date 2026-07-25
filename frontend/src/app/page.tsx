@@ -19,8 +19,14 @@ import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
 export default async function LandingPage() {
-  const { userId } = await auth();
-  
+  let userId = null;
+  try {
+    const authRes = await auth();
+    userId = authRes?.userId;
+  } catch (err) {
+    // Fallback gracefully when Clerk keys are not configured in environment
+  }
+
   if (userId) {
     redirect('/overview');
   }

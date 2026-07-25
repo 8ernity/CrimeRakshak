@@ -13,13 +13,18 @@ import { auth } from "@clerk/nextjs/server";
 
 const BACKEND_URL =
   process.env.BACKEND_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://127.0.0.1:8001");
+  (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, "") : "https://crimerakshak-backend-50044226161.development.catalystappsail.in");
 
 export async function POST(req: Request) {
   try {
-    const { userId, getToken: getClerkToken } = await auth();
-    if (!userId) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    let token: string | null = null;
+    try {
+      const authRes = await auth();
+      if (authRes?.getToken) {
+        token = await authRes.getToken();
+      }
+    } catch (e) {
+      // Clerk unconfigured fallback
     }
 
     const { message, conversation_id, language } = await req.json();
@@ -27,12 +32,11 @@ export async function POST(req: Request) {
       return Response.json({ error: "message is required" }, { status: 400 });
     }
 
-    const token = await getClerkToken();
     const res = await fetch(`${BACKEND_URL}/api/v1/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
         message,

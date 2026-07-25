@@ -10,7 +10,7 @@ import { auth } from "@clerk/nextjs/server";
 // origin so /api/v1/* is served by the backend function (see vercel.json).
 const BACKEND_URL =
   process.env.BACKEND_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://127.0.0.1:8001");
+  (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, "") : "https://crimerakshak-backend-50044226161.development.catalystappsail.in");
 
 
 export async function GET(
@@ -18,9 +18,14 @@ export async function GET(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    const { userId, getToken: getClerkToken } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let token: string | null = null;
+    try {
+      const authRes = await auth();
+      if (authRes?.getToken) {
+        token = await authRes.getToken();
+      }
+    } catch (e) {
+      // Clerk fallback
     }
 
     const params = await context.params;
@@ -30,11 +35,10 @@ export async function GET(
       searchParams ? `?${searchParams}` : ""
     }`;
 
-    const token = await getClerkToken();
     const res = await fetch(targetUrl, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         "Content-Type": "application/json",
       },
       cache: "no-store",
@@ -62,9 +66,14 @@ export async function POST(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    const { userId, getToken: getClerkToken } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let token: string | null = null;
+    try {
+      const authRes = await auth();
+      if (authRes?.getToken) {
+        token = await authRes.getToken();
+      }
+    } catch (e) {
+      // Clerk fallback
     }
 
     const params = await context.params;
@@ -72,11 +81,10 @@ export async function POST(
     const targetUrl = `${BACKEND_URL}/api/v1/analytics/${path}`;
     const body = await req.json();
 
-    const token = await getClerkToken();
     const res = await fetch(targetUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),

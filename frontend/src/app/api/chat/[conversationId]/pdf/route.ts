@@ -5,22 +5,26 @@ import { auth } from "@clerk/nextjs/server";
 
 const BACKEND_URL =
   process.env.BACKEND_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://127.0.0.1:8001");
+  (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, "") : "https://crimerakshak-backend-50044226161.development.catalystappsail.in");
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
-  const { userId, getToken: getClerkToken } = await auth();
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  let token: string | null = null;
+  try {
+    const authRes = await auth();
+    if (authRes?.getToken) {
+      token = await authRes.getToken();
+    }
+  } catch (e) {
+    // Clerk fallback
   }
 
   const { conversationId } = await params;
   try {
-    const token = await getClerkToken();
     const res = await fetch(`${BACKEND_URL}/api/v1/chat/${conversationId}/pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!res.ok) {
       const text = await res.text();
