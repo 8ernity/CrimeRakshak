@@ -1,9 +1,17 @@
 {
   "command": "node server.js",
-  "build_command": "npm install && python3 -m pip install --only-binary=:all: -r requirements.txt",
+  "build_command": "npm install",
   "build_path": ".",
   "stack": "node20",
   "env_variables": {},
   "memory": 1024,
+  "ignore": [
+    "venv",
+    ".venv",
+    "node_modules",
+    "__pycache__",
+    "*.pyc",
+    "logs"
+  ],
   "scripts": {}
 }

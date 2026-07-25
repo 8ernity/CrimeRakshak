@@ -5,9 +5,10 @@ backend/.venv/
 backend/venv/
 
 # =========================
-# Frontend Dependencies
+# Frontend Dependencies & Builds
 # =========================
 frontend/node_modules/
+frontend/.next/
 frontend/.clerk/
 
 # =========================
