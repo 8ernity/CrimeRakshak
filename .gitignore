@@ -2,8 +2,9 @@
 .env
 backend/.env
 
-# DuckDB build artifact (rebuild via python -m app.chat.data.loader)
+# DuckDB build artifact & SQLite databases
 *.duckdb
+*.db
 
 # Generated conversation PDFs
 backend/exports/
@@ -31,3 +32,5 @@ test_pg.py
 # ── OS artifacts ──
 .DS_Store
 Thumbs.db
+.vercel
+.env*

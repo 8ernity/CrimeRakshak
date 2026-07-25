@@ -1,0 +1,10 @@
+{
+  "name": "crimerakshak",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "start-all.bat",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --port 8001",
+    "dev:frontend": "cd frontend && npm run dev"
+  }
+}
