@@ -10,18 +10,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--port", type=int, default=None)
 args, _ = parser.parse_known_args()
 
-# Determine port from CLI arg (--port $PORT), environment variable, or default
-port = args.port or int(os.environ.get("PORT") or 8000)
+# Determine port from CLI arg (--port $PORT), environment variable, or default to 9000 (Catalyst port)
+port = args.port or int(os.environ.get("X_ZOHO_CATALYST_LISTEN_PORT") or os.environ.get("PORT") or 9000)
 
 print(f"Resolved port: {port}")
 print(f"Python version: {sys.version}")
 print(f"Current working dir: {os.getcwd()}")
 sys.stdout.flush()
 
-# Ensure site-packages and current directory are in sys.path
+# Ensure site-packages, lib directory, and current directory are in sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
+
+# Catalyst AppSail: dependencies are bundled in ./lib
+lib_dir = os.path.join(current_dir, "lib")
+if os.path.exists(lib_dir) and lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
 
 user_site = os.path.expanduser("~/.local/lib/python3.11/site-packages")
 if os.path.exists(user_site) and user_site not in sys.path:

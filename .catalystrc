@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "56571000000013049",
+      "name": "CrimeRakshak",
+      "domain": {
+        "id": "50044347084",
+        "name": "crimerakshak-60080069387.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60080069387",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}

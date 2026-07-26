@@ -1,0 +1,9 @@
+{
+  "name": "crimerakshak-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "pip install --user -r requirements.txt || pip3 install --user -r requirements.txt"
+  }
+}

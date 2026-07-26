@@ -169,13 +169,70 @@ export default function UniversalAuth({
         >
           {/* ─── Sign Up Form (DOM-first) ─── */}
           <div className="auth-form-container sign-up-container">
-            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4">
-              <SignUp appearance={{
-                elements: {
-                  footerAction: "hidden",
-                  card: "shadow-none bg-transparent w-full"
-                }
-              }} routing="hash" fallbackRedirectUrl="/overview" />
+            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4 px-6">
+              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+                <SignUp appearance={{
+                  elements: {
+                    footerAction: "hidden",
+                    card: "shadow-none bg-transparent w-full"
+                  }
+                }} routing="hash" fallbackRedirectUrl="/overview" />
+              ) : (
+                <form onSubmit={handleSignup} className="w-full space-y-3">
+                  <h3 className="text-2xl font-bold text-slate-800 text-center mb-2">Create Account</h3>
+                  <div>
+                    <input
+                      name="displayName"
+                      type="text"
+                      placeholder="Officer Full Name"
+                      value={formData.displayName}
+                      onChange={updateFormData}
+                      className={inputClass}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="Official Email (police.gov.in)"
+                      value={formData.email}
+                      onChange={updateFormData}
+                      className={inputClass}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={updateFormData}
+                      className={inputClass}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={formData.confirmPassword}
+                      onChange={updateFormData}
+                      className={inputClass}
+                      required
+                    />
+                  </div>
+                  {signupError && <p className="text-xs text-red-500 text-center">{signupError}</p>}
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-[#2563EB] py-3 font-semibold text-white hover:bg-blue-700 transition-colors shadow-md"
+                  >
+                    Sign Up
+                  </button>
+                </form>
+              )}
               
               {/* Mobile-only switch link */}
               <div className="mt-4 text-center md:hidden pb-10">
@@ -193,13 +250,53 @@ export default function UniversalAuth({
 
           {/* ─── Sign In Form (DOM-second) ─── */}
           <div className="auth-form-container sign-in-container">
-            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4">
-              <SignIn appearance={{
-                elements: {
-                  footerAction: "hidden",
-                  card: "shadow-none bg-transparent w-full"
-                }
-              }} routing="hash" fallbackRedirectUrl="/overview" />
+            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4 px-6">
+              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+                <SignIn appearance={{
+                  elements: {
+                    footerAction: "hidden",
+                    card: "shadow-none bg-transparent w-full"
+                  }
+                }} routing="hash" fallbackRedirectUrl="/overview" />
+              ) : (
+                <form onSubmit={handleLogin} className="w-full space-y-4">
+                  <h3 className="text-2xl font-bold text-slate-800 text-center mb-2">Sign In</h3>
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Badge ID / Official Email"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      className={inputClass}
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showLoginPassword ? "text" : "password"}
+                      placeholder="Password"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      className={inputClass}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+                    >
+                      {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {loginError && <p className="text-xs text-red-500 text-center">{loginError}</p>}
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-[#2563EB] py-3 font-semibold text-white hover:bg-blue-700 transition-colors shadow-md"
+                  >
+                    Sign In
+                  </button>
+                </form>
+              )}
               
               {/* Mobile-only switch link */}
               <div className="mt-4 text-center md:hidden pb-10">

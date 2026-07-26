@@ -63,16 +63,7 @@ export default function AIPredictionPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [source, setSource] = useState<"live" | "simulated">("simulated");
   const [meta, setMeta] = useState<PredictionMeta | null>(null);
-  const [result, setResult] = useState<PredictionResult | null>(() =>
-    runPrediction({
-      district: "Bengaluru City",
-      crimeType: "Theft",
-      months: 3,
-      modelType: "LSTM",
-      includeEnvironmental: true,
-      includeEvents: false,
-    })
-  );
+  const [result, setResult] = useState<PredictionResult | null>(null);
 
   // Call the real ML backend; fall back to the client-side simulation offline.
   const executePrediction = async (input: PredictionInput, showTerminal: boolean) => {

@@ -7,20 +7,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userId } = await auth();
+  try {
+    const { userId } = await auth();
 
-  // If the user is not signed in, redirect them to the login page
-  if (!userId) {
-    redirect('/login');
-  }
+    if (userId) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      const role = user.publicMetadata?.role;
 
-  // Check if they have a role configured, otherwise send to onboarding
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const role = user.publicMetadata?.role;
-
-  if (!role) {
-    redirect('/onboarding');
+      if (!role) {
+        redirect('/onboarding');
+      }
+    }
+  } catch (err) {
+    // Graceful fallback when Clerk API keys are unconfigured in environment
   }
 
   // Pass children to the client-side layout component

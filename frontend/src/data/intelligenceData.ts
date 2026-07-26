@@ -1156,104 +1156,72 @@ export interface CaseRecord {
   aiAnalysis: string;
 }
 
-export const cases: CaseRecord[] = [
-  {
-    firNumber: "FIR-2025-BLR-0847",
-    date: "2025-03-15",
-    crimeType: "Armed Robbery",
-    section: "IPC 392, 397",
-    accused: ["Rajesh Kumar", "Unknown"],
-    victim: "Meera Devi",
-    location: "Majestic Area, Bengaluru",
-    status: "under-investigation",
-    summary: "Armed robbery at a jewelry store in Majestic area at approximately 9:45 PM. Two suspects, one identified as Rajesh Kumar (repeat offender, 7 prior FIRs), entered the store with concealed weapons. Approximately ₹12.5 lakh worth of gold jewelry was stolen. CCTV footage partially captured the incident.",
-    timeline: [
-      { date: "2025-03-15", event: "FIR Filed at Upparpet PS" },
-      { date: "2025-03-16", event: "CCTV footage reviewed — 1 suspect identified" },
-      { date: "2025-03-18", event: "Rajesh Kumar identified via facial recognition" },
-      { date: "2025-03-20", event: "Arrest warrant issued" },
-      { date: "2025-03-25", event: "Rajesh Kumar arrested at Whitefield hideout" },
-    ],
-    similarCases: ["FIR-2023-BLR-0412", "FIR-2022-BLR-1105", "FIR-2021-BLR-0673"],
-    leads: ["Cross-reference HDFC-****4521 for recent large deposits", "Check CCTV at MG Road metro for second suspect", "Interview jewelry store employees for insider information"],
-    solvabilityScore: 82,
-    investigatingOfficer: "Insp. Vikram Patil",
-    witnessCount: 3,
-    evidence: [
-      { type: "CCTV Footage", description: "Exterior street camera capturing getaway vehicle", status: "processed" },
-      { type: "Weapon", description: "Discarded 9mm handgun found 2km from scene", status: "at-forensics" },
-      { type: "Fingerprint", displayTitle: "Fingerprint Lift", description: "Partial print from display case glass", status: "processed" }
-    ],
-    recoveredAssets: "₹4.2 Lakh (Partial)",
-    nextHearingDate: null,
-    priority: "critical",
-    aiAnalysis: "Pattern matches three previous armed robberies in the Majestic area within the last 24 months. High likelihood of insider collusion given the precise targeting of the highest-value display case within a 3-minute window. The second suspect is likely a new recruit, showing signs of hesitation in the CCTV footage."
-  },
-  {
-    firNumber: "FIR-2025-BLR-1234",
-    date: "2025-05-20",
-    crimeType: "Cybercrime - Wire Fraud",
-    section: "IT Act 66C, 66D",
-    accused: ["Farhan Sheikh"],
-    victim: "Multiple (12 complainants)",
-    location: "Whitefield, Bengaluru",
-    status: "under-investigation",
-    summary: "Sophisticated wire fraud scheme targeting senior citizens through fake bank customer care calls. Victims were tricked into revealing OTPs and transferring funds to mule accounts. Total estimated loss: ₹48.7 lakh across 12 victims. Suspect Farhan Sheikh has 7 prior cybercrime FIRs.",
-    timeline: [
-      { date: "2025-05-18", event: "First complaint received at Cyber Crime PS" },
-      { date: "2025-05-19", event: "4 more victims identified through common phone number" },
-      { date: "2025-05-20", event: "FIR registered; bank accounts frozen" },
-      { date: "2025-05-22", event: "SIM card traced to Farhan Sheikh" },
-      { date: "2025-05-25", event: "Lookout circular issued — suspect absconding" },
-    ],
-    similarCases: ["FIR-2024-BLR-0891", "FIR-2023-BLR-1567"],
-    leads: ["Trace ICICI-****1190 withdrawal locations", "Check mule account KYC documents for accomplices", "Coordinate with Telecom provider for call detail records"],
-    solvabilityScore: 65,
-    investigatingOfficer: "ACP Neha Sharma",
-    witnessCount: 12,
-    evidence: [
-      { type: "Digital Logs", description: "IP access logs for the mule accounts", status: "processed" },
-      { type: "Call Records", description: "CDR of the primary spoofed number", status: "collected" },
-      { type: "Financial", description: "Frozen bank statements from 4 mule accounts", status: "processed" }
-    ],
-    recoveredAssets: "₹18.5 Lakh (Frozen)",
-    nextHearingDate: null,
-    priority: "high",
-    aiAnalysis: "The structured nature of the withdrawals (keeping amounts under ₹50k to avoid automated flagging) indicates a highly organized operation. The suspect is likely part of a larger syndicate operating out of Jamtara or a similar hub, using local operatives for cash withdrawals."
-  },
-  {
-    firNumber: "FIR-2024-BLR-0965",
-    date: "2024-12-01",
-    crimeType: "Narcotics Possession",
-    section: "NDPS Act 21, 22",
-    accused: ["Anil Gowda"],
-    victim: "State",
-    location: "KR Puram, Bengaluru",
-    status: "court-pending",
-    summary: "Narcotics raid at a warehouse in KR Puram led to the seizure of 2.5 kg of methamphetamine and 500g of MDMA. Accused Anil Gowda was apprehended at the scene. Investigation revealed links to an interstate drug trafficking network operating across Karnataka and Tamil Nadu.",
-    timeline: [
-      { date: "2024-11-28", event: "Intelligence tip received from informant" },
-      { date: "2024-11-30", event: "Surveillance operation initiated" },
-      { date: "2024-12-01", event: "Raid conducted; Anil Gowda arrested with contraband" },
-      { date: "2024-12-05", event: "Charge sheet filed" },
-      { date: "2025-01-15", event: "Case referred to NDPS Court" },
-    ],
-    similarCases: ["FIR-2023-BLR-0782", "FIR-2022-MNG-0234"],
-    leads: ["Investigate supply chain from Tamil Nadu border", "Check SBI-****8832 for hawala transactions", "Interview warehouse owner for rental agreement details"],
-    solvabilityScore: 95,
-    investigatingOfficer: "DCP Rajesh Menon",
-    witnessCount: 4,
-    evidence: [
-      { type: "Contraband", description: "2.5kg Meth, 500g MDMA seized at scene", status: "processed" },
-      { type: "Mobile Device", description: "Burner phone recovered from accused", status: "at-forensics" },
-      { type: "Document", description: "Warehouse lease agreement", status: "processed" }
-    ],
-    recoveredAssets: "₹35 Lakh (Contraband Value)",
-    nextHearingDate: "2026-08-14",
-    priority: "medium",
-    aiAnalysis: "The scale of the seizure suggests this location was a primary distribution node for East Bengaluru. Communication logs from the recovered burner phone, once decrypted, will likely expose the interstate supply chain route originating from Chennai."
-  },
+const karnatakaDistricts = [
+  "Bengaluru Urban", "Bengaluru City", "Mysuru", "Belagavi", "Kalaburagi",
+  "Dakshina Kannada", "Vijayapur", "Ballari", "Davanagere", "Shivamogga",
+  "Hassan", "Mandya", "Udupi", "Dharwad", "Bagalkot", "Chickballapura",
+  "Kolar", "Raichur", "Kodagu", "Chikkamagaluru"
 ];
+
+const crimeTypesList = [
+  { type: "Cybercrime - Wire Fraud", sec: "IT Act 66C, 66D" },
+  { type: "Armed Robbery", sec: "IPC 392, 397" },
+  { type: "Narcotics Possession", sec: "NDPS Act 21, 22" },
+  { type: "Theft & Housebreak", sec: "IPC 379, 457" },
+  { type: "Extortion", sec: "IPC 384, 506" },
+  { type: "Chain Snatching", sec: "IPC 379, 356" },
+  { type: "NDPS & Smuggling", sec: "NDPS Act 20, 29" },
+  { type: "Financial Fraud & UPI Phishing", sec: "IT Act 66D, IPC 420" },
+  { type: "Assault & Hurt", sec: "IPC 323, 324" },
+  { type: "Murder", sec: "IPC 302" }
+];
+
+export const cases: CaseRecord[] = Array.from({ length: 100 }, (_, i) => {
+  const idx = i + 1;
+  const numStr = String(idx).padStart(4, "0");
+  const district = karnatakaDistricts[idx % karnatakaDistricts.length];
+  const distCode = district.substring(0, 3).toUpperCase();
+  const crime = crimeTypesList[idx % crimeTypesList.length];
+  const statuses: ("under-investigation" | "charge-sheeted" | "court-pending" | "convicted" | "closed")[] = [
+    "under-investigation", "charge-sheeted", "court-pending", "convicted", "closed"
+  ];
+  const priorities: ("critical" | "high" | "medium" | "low")[] = ["critical", "high", "medium", "low"];
+  const year = 2025 - (idx % 2);
+  const month = String(1 + (idx % 12)).padStart(2, "0");
+  const day = String(1 + (idx % 28)).padStart(2, "0");
+
+  return {
+    firNumber: `FIR-${year}-${distCode}-${numStr}`,
+    date: `${year}-${month}-${day}`,
+    crimeType: crime.type,
+    section: crime.sec,
+    accused: idx % 3 === 0 ? ["Rajesh Kumar", "Unknown"] : idx % 3 === 1 ? ["Farhan Sheikh"] : ["Anil Gowda"],
+    victim: idx % 2 === 0 ? "State of Karnataka" : "Multiple Complainants",
+    location: `${district}, Karnataka`,
+    status: statuses[idx % 5],
+    priority: priorities[idx % 4],
+    summary: `Reported incident of ${crime.type} in ${district}. Investigation initiated under ${crime.sec}. Evidence logged at local station locker.`,
+    timeline: [
+      { date: `${year}-${month}-${day}`, event: `FIR filed at ${district} Police Station` },
+      { date: `${year}-${month}-${day}`, event: `Evidence collected & submitted to FSL` }
+    ],
+    similarCases: [`FIR-${year}-${distCode}-0012`, `FIR-${year}-${distCode}-0045`],
+    leads: [
+      `Check CCTV footage near ${district} transit hubs`,
+      `Cross-reference accused mobile CDR and tower dump`
+    ],
+    solvabilityScore: 45 + ((idx * 37) % 50),
+    investigatingOfficer: `Insp. ${["Vikram Patil", "Neha Sharma", "Rajesh Menon", "Suresh Gowda"][idx % 4]}`,
+    witnessCount: 1 + (idx % 5),
+    evidence: [
+      { type: "CCTV Footage", description: "Street camera recording", status: "processed" },
+      { type: "Mobile Logs", description: "CDR & IP dump", status: "at-forensics" }
+    ],
+    recoveredAssets: idx % 2 === 0 ? `₹${(idx * 25).toLocaleString()}K` : "Under Valuation",
+    nextHearingDate: idx % 4 === 0 ? `${year}-12-15` : null,
+    aiAnalysis: `Solvability rating computed based on witness density, evidence status, and past offender modus operandi match in ${district}.`
+  };
+});
 
 // ─── Financial Trails Data ───────────────────────────────────────────
 

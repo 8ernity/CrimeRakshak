@@ -1,0 +1,17 @@
+{
+  "command": "node server.js",
+  "build_command": "npm install && npm run build",
+  "build_path": ".",
+  "stack": "node20",
+  "env_variables": {
+    "NEXT_PUBLIC_API_URL": "https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1"
+  },
+  "memory": 512,
+  "ignore": [
+    "node_modules",
+    ".next",
+    ".clerk",
+    ".tmp"
+  ],
+  "scripts": {}
+}
