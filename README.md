@@ -1,4 +1,5 @@
 # 🔍 CrimeRakshak
+<img width="1774" height="887" alt="file_00000000f88882068813e530c9b46344" src="https://github.com/user-attachments/assets/d715b95d-1567-4539-8943-a385ff2d7a44" />
 
 > **Intelligent Conversational AI & Graph Analytics Platform for Karnataka State Police (KSP)**
 
