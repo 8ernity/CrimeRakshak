@@ -91,6 +91,16 @@ def _startup_seed() -> None:
     except Exception as e:
         logger.error(f"Failed to auto-seed database: {e}")
 
+    try:
+        from app.chat.data.case_generator import generate as generate_cases
+        from app.chat.data.loader import build_database
+        logger.info("Generating synthetic cases and building DuckDB dataset...")
+        generate_cases()
+        build_database()
+        logger.info("DuckDB dataset built successfully.")
+    except Exception as e:
+        logger.error(f"Failed to build DuckDB dataset: {e}")
+
 
 @app.on_event("shutdown")
 def _shutdown_graph() -> None:

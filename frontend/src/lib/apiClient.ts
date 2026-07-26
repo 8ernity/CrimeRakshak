@@ -3,7 +3,7 @@
 // backend function (see vercel.json). Local dev sets it explicitly in .env.local.
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://crimerakshak-backend-50044226161.development.catalystappsail.in/api/v1";
+  "https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1";
 
 let cachedToken: string | null = null;
 

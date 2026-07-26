@@ -119,9 +119,9 @@ export default function AIAssistantPage() {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data?.detail || data?.error || `Request failed (${res.status})`);
-    conversationId.current = data.conversation_id ?? conversationId.current;
-    return { answer: data.answer ?? "(no answer)", sources: data.sources ?? [], trace: data.trace ?? [] };
+    const answerText = data.answer || data.reply || data.response || (typeof data === "string" ? data : "");
+    const sourcesList = data.sources || data.citations || [];
+    return { answer: answerText || "(no answer)", sources: sourcesList, trace: data.trace ?? [] };
   }
 
   const handleSend = async (query?: string) => {

@@ -55,8 +55,15 @@ def _sanitize(sql: str) -> str:
 
 def run_query(sql: str, duckdb_path: str | None = None, max_rows: int = MAX_ROWS) -> QueryResult:
     """Validate and execute a read-only query; return capped, dict-shaped rows."""
+    import os
     safe_sql = _sanitize(sql)
     db_path = duckdb_path or settings.DUCKDB_PATH
+
+    if not os.path.exists(db_path):
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        candidate = os.path.join(base_dir, "crime_stats.duckdb")
+        if os.path.exists(candidate):
+            db_path = candidate
 
     con = duckdb.connect(db_path, read_only=True)
     try:
