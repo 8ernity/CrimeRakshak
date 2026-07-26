@@ -488,7 +488,7 @@ BACKEND_URL=http://localhost:9000
 #### 1. Clone Project Repository
 
 ```bash
-git clone https://github.com/lokojitcoder123/CrimeRakshak-NEW.git
+git clone https://github.com/Ishitadas03/CrimeRakshak.git
 cd CrimeRakshak-NEW
 ```
 
