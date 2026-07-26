@@ -1,7 +1,5 @@
 # 🔍 CrimeRakshak
 
-<img width="1774" height="887" alt="file_00000000f88882068813e530c9b46344" src="https://github.com/user-attachments/assets/55dc0184-89e7-44d7-a12b-0b833cb31f64" />
-
 > **Intelligent Conversational AI & Graph Analytics Platform for Karnataka State Police (KSP)**
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
@@ -579,26 +577,35 @@ python ingest.py
 
 ## 🚀 Deployment
 
-### Backend Deployment (Render / Railway / Fly.io / AWS EC2)
+### 🌐 Live Application (Zoho Catalyst AppSail)
+- **Frontend Live URL**: [https://crimerakshak-frontend-50044347084.development.catalystappsail.in/](https://crimerakshak-frontend-50044347084.development.catalystappsail.in/)
+- **Backend Live URL**: [https://crimerakshak-backend-50044347084.development.catalystappsail.in](https://crimerakshak-backend-50044347084.development.catalystappsail.in)
+
+### Backend Deployment (Zoho Catalyst AppSail)
 
 | Parameter | Configuration |
 |---|---|
+| **Platform** | Zoho Catalyst AppSail |
 | **Runtime Environment** | Python 3.9+ |
 | **Build Command** | `pip install -r requirements.txt` |
 | **Start Command** | `python run.py` |
 | **Port Variable** | `PORT` (Defaults to `9000`) |
 | **Health Check Endpoint** | `/health` |
 
-### Frontend Deployment (Vercel / Netlify)
+### Frontend Deployment (Zoho Catalyst AppSail)
 
 | Parameter | Configuration |
 |---|---|
+| **Platform** | Zoho Catalyst AppSail |
 | **Build Command** | `npm run build` |
 | **Output Directory** | `.next` |
 | **Start Command** | `npm start` |
 | **Root Directory** | `frontend/` |
 
-> **Note**: Update `NEXT_PUBLIC_API_URL` and `BACKEND_URL` in the frontend environment variables after deploying the backend to point to your live backend service URL.
+> **Note**: For live deployment on Zoho Catalyst AppSail, configure the frontend environment variable:
+> ```env
+> NEXT_PUBLIC_API_URL=https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1
+> ```
 
 ---
 
