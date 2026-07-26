@@ -54,24 +54,39 @@ export default function FinancialPage() {
   const [flowData, setFlowData] = useState<{from: string, to: string, amount: number}[]>([]);
 
   useEffect(() => {
-    const DEMO_TXNS: SuspiciousTransaction[] = [
-      { id: "TXN-KA2024-001", severity: "critical", status: "escalated", flag: "structuring", fromAccount: "ACC-48291730", toAccount: "ACC-55103842", date: "2024-11-15", amount: 485000, linkedFIR: "FIR-BLR-2024-1847", linkedAccused: "Rajesh Kumar" },
-      { id: "TXN-KA2024-002", severity: "critical", status: "flagged", flag: "amount-anomaly", fromAccount: "ACC-72045619", toAccount: "ACC-31984205", date: "2024-11-12", amount: 372000, linkedFIR: "FIR-MYS-2024-0934", linkedAccused: "Mohammed Ismail" },
-      { id: "TXN-KA2024-003", severity: "high", status: "under-review", flag: "cross-border", fromAccount: "ACC-55103842", toAccount: "ACC-89012456", date: "2024-11-10", amount: 250000, linkedFIR: "FIR-HBL-2024-0621", linkedAccused: "Vinod Gowda" },
-      { id: "TXN-KA2024-004", severity: "critical", status: "flagged", flag: "structuring", fromAccount: "ACC-31984205", toAccount: "ACC-48291730", date: "2024-11-08", amount: 320000, linkedFIR: "FIR-BLR-2024-1902", linkedAccused: "Suresh Reddy" },
-      { id: "TXN-KA2024-005", severity: "high", status: "flagged", flag: "frequency-anomaly", fromAccount: "ACC-67230148", toAccount: "ACC-72045619", date: "2024-11-05", amount: 200000, linkedFIR: "FIR-BGM-2024-0418", linkedAccused: "Ravi Hegde" },
-      { id: "TXN-KA2024-006", severity: "medium", status: "flagged", flag: "amount-anomaly", fromAccount: "ACC-89012456", toAccount: "ACC-34567890", date: "2024-10-28", amount: 145000, linkedFIR: "FIR-MNG-2024-0312", linkedAccused: "Prakash J." },
-      { id: "TXN-KA2024-007", severity: "high", status: "under-review", flag: "cross-border", fromAccount: "ACC-12345678", toAccount: "ACC-55103842", date: "2024-10-25", amount: 180000, linkedFIR: "FIR-DVG-2024-0215", linkedAccused: "Ashok Patil" },
-      { id: "TXN-KA2024-008", severity: "medium", status: "flagged", flag: "frequency-anomaly", fromAccount: "ACC-34567890", toAccount: "ACC-67230148", date: "2024-10-20", amount: 125000, linkedFIR: "FIR-BLR-2024-1756", linkedAccused: "Anil Sharma" },
-    ];
+    const DEMO_TXNS: SuspiciousTransaction[] = Array.from({ length: 100 }, (_, i) => {
+      const idx = i + 1;
+      const numStr = String(idx).padStart(3, "0");
+      const severities: ("critical" | "high" | "medium")[] = ["critical", "high", "medium"];
+      const flags: ("amount-anomaly" | "frequency-anomaly" | "cross-border" | "structuring")[] = [
+        "amount-anomaly", "frequency-anomaly", "cross-border", "structuring"
+      ];
+      const statuses: ("flagged" | "under-review" | "escalated" | "resolved")[] = ["flagged", "under-review", "escalated"];
+      const fromAcc = `ACC-${40000000 + ((idx * 3719) % 50000000)}`;
+      const toAcc = `ACC-${40000000 + ((idx * 7919) % 50000000)}`;
+      const amt = 100000 + ((idx * 49911) % 400000);
+      const month = String(1 + (idx % 12)).padStart(2, "0");
+      const day = String(1 + (idx % 28)).padStart(2, "0");
 
-    const DEMO_FLOWS = [
-      { from: "ACC-48291730", to: "ACC-55103842", amount: 485000 },
-      { from: "ACC-55103842", to: "ACC-72045619", amount: 250000 },
-      { from: "ACC-72045619", to: "ACC-31984205", amount: 372000 },
-      { from: "ACC-31984205", to: "ACC-48291730", amount: 320000 },
-      { from: "ACC-67230148", to: "ACC-72045619", amount: 200000 },
-    ];
+      return {
+        id: `TXN-KA2026-${numStr}`,
+        severity: severities[idx % 3],
+        status: statuses[idx % 3],
+        flag: flags[idx % 4],
+        fromAccount: fromAcc,
+        toAccount: toAcc,
+        date: `2026-${month}-${day}`,
+        amount: amt,
+        linkedFIR: `FIR-BLR-2026-${1000 + idx}`,
+        linkedAccused: `Suspect Account #${idx}`,
+      };
+    });
+
+    const DEMO_FLOWS = DEMO_TXNS.map((t) => ({
+      from: t.fromAccount,
+      to: t.toAccount,
+      amount: t.amount,
+    }));
 
     const loadData = async () => {
       try {
@@ -136,7 +151,7 @@ export default function FinancialPage() {
           });
           
           if (flows.length === 0) {
-             txns.slice(0, 5).forEach((t: any) => {
+             txns.forEach((t: any) => {
                flows.push({ from: t.fromAccount, to: t.toAccount, amount: t.amount });
              });
           }
@@ -269,7 +284,7 @@ export default function FinancialPage() {
               <CardHeader className="pb-2 border-b border-border/50 bg-muted/10">
                 <CardTitle className="text-base font-heading">{t("Money Flow Traces")}</CardTitle>
               </CardHeader>
-              <CardContent className="p-4 space-y-2">
+              <CardContent className="p-4 space-y-2 max-h-[500px] overflow-y-auto pr-1">
                 {flowData.map((flow, i) => (
                   <motion.div
                     key={i}
