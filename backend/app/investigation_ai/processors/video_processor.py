@@ -24,15 +24,20 @@ class VideoProcessor(BaseMediaProcessor):
         self,
         video_path: str,
         sample_rate_fps: int = 2,
+        tracker_type: str = "bytetrack",
         progress_callback: Optional[Callable[[int, int, float], None]] = None,
     ) -> Dict[str, Any]:
-        """Perform object detection on sampled frames of a video file."""
+        """Perform object detection and multi-object tracking on sampled frames of a video file."""
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found at '{video_path}'")
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise ValueError(f"Unable to open or read video file at '{video_path}'")
+
+        # Reset tracker state before starting video stream
+        self.detector.reset_tracker()
+        tracker_cfg = "botsort.yaml" if tracker_type.lower() == "botsort" else "bytetrack.yaml"
 
         try:
             fps = cap.get(cv2.CAP_PROP_FPS)
@@ -52,7 +57,7 @@ class VideoProcessor(BaseMediaProcessor):
             current_frame_idx = 0
 
             logger.info(
-                f"Starting video processing: '{video_path}' | FPS: {fps:.2f} | Total Frames: {total_frames} | Step: {step_frames}"
+                f"Starting video tracking: '{video_path}' | Tracker: {tracker_cfg} | FPS: {fps:.2f} | Total Frames: {total_frames} | Step: {step_frames}"
             )
 
             while cap.isOpened():
@@ -62,7 +67,7 @@ class VideoProcessor(BaseMediaProcessor):
 
                 if current_frame_idx % step_frames == 0:
                     timestamp = round(current_frame_idx / fps, 3)
-                    dets = self.detector.detect_objects_in_ndarray(frame)
+                    dets = self.detector.track_objects_in_ndarray(frame, tracker=tracker_cfg, persist=True)
                     
                     for d in dets:
                         d["frame_number"] = current_frame_idx

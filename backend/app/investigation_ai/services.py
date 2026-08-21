@@ -353,6 +353,7 @@ def analyze_video_media(
     user: User,
     sample_rate_fps: Optional[int] = None,
     conf_threshold: Optional[float] = None,
+    tracker_type: Optional[str] = "bytetrack",
     ip_address: Optional[str] = None,
 ) -> dict:
     media = get_media_by_id(db, media_id)
@@ -364,7 +365,8 @@ def analyze_video_media(
         )
 
     rate_fps = sample_rate_fps if sample_rate_fps is not None and sample_rate_fps > 0 else settings.FRAME_SAMPLE_RATE
-    job = create_analysis_job(db=db, media_id=media.media_id, user=user, job_type="video_detection", ip_address=ip_address)
+    selected_tracker = tracker_type if tracker_type else "bytetrack"
+    job = create_analysis_job(db=db, media_id=media.media_id, user=user, job_type="video_tracking", ip_address=ip_address)
 
     try:
         from app.investigation_ai.processors.video_processor import VideoProcessor
@@ -377,6 +379,7 @@ def analyze_video_media(
         results = processor.process_video(
             video_path=media.file_path,
             sample_rate_fps=rate_fps,
+            tracker_type=selected_tracker,
             progress_callback=update_job_progress,
         )
 
@@ -389,7 +392,7 @@ def analyze_video_media(
                 frame_number=det["frame_number"],
                 timestamp_seconds=det["timestamp_seconds"],
                 object_class=det["object_class"],
-                tracking_id=None,
+                tracking_id=det.get("tracking_id"),
                 confidence=det["confidence"],
                 bbox_xmin=bbox["xmin"],
                 bbox_ymin=bbox["ymin"],

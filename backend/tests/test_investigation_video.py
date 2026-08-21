@@ -149,6 +149,43 @@ def test_analyze_existing_video_media():
             os.remove(video_path)
 
 
+def test_analyze_video_with_bytetrack():
+    video_path = generate_sample_mp4(num_frames=25, fps=10, width=320, height=240)
+    try:
+        with open(video_path, "rb") as f:
+            video_bytes = f.read()
+
+        files = {"file": ("tracking_test.mp4", video_bytes, "video/mp4")}
+        data_form = {
+            "fir_id": "FIR-2026-TRACK-001",
+            "sample_rate_fps": "2",
+            "confidence_threshold": "0.1",
+            "tracker_type": "bytetrack",
+        }
+
+        response = client.post("/api/v1/investigation/analyze-video", files=files, data=data_form)
+        assert response.status_code == 200, f"Response text: {response.text}"
+
+        data = response.json()
+        assert data["job"]["job_type"] == "video_tracking"
+        assert data["job"]["status"] == "completed"
+        assert "detections" in data
+        assert isinstance(data["detections"], list)
+
+        # Verify detection fields structure (tracking_id, object_class, confidence, timestamp_seconds, bbox)
+        for det in data["detections"]:
+            assert "frame_number" in det
+            assert "timestamp_seconds" in det
+            assert "object_class" in det
+            assert "confidence" in det
+            assert "bbox" in det
+            assert "tracking_id" in det
+
+    finally:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+
 if __name__ == "__main__":
     test_analyze_video_invalid_format()
     print("[PASS] test_analyze_video_invalid_format")
@@ -156,4 +193,7 @@ if __name__ == "__main__":
     print("[PASS] test_analyze_video_success")
     test_analyze_existing_video_media()
     print("[PASS] test_analyze_existing_video_media")
-    print("ALL VIDEO ANALYSIS TESTS PASSED CLEANLY!")
+    test_analyze_video_with_bytetrack()
+    print("[PASS] test_analyze_video_with_bytetrack")
+    print("ALL VIDEO ANALYSIS AND TRACKING TESTS PASSED CLEANLY!")
+

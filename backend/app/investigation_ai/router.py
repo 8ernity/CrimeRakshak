@@ -257,7 +257,7 @@ def analyze_existing_image_media(
 @router.post(
     "/analyze-video",
     response_model=VideoAnalysisResponse,
-    summary="Upload and perform frame sampling YOLO object detection on a crime incident video",
+    summary="Upload and perform frame sampling YOLO object tracking on a crime incident video",
 )
 def upload_and_analyze_video(
     request: Request,
@@ -266,6 +266,7 @@ def upload_and_analyze_video(
     fir_id: Optional[str] = Form(None),
     sample_rate_fps: Optional[int] = Form(None),
     confidence_threshold: Optional[float] = Form(None),
+    tracker_type: Optional[str] = Form("bytetrack"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> VideoAnalysisResponse:
@@ -283,6 +284,7 @@ def upload_and_analyze_video(
         user=current_user,
         sample_rate_fps=sample_rate_fps,
         conf_threshold=confidence_threshold,
+        tracker_type=tracker_type,
         ip_address=get_client_ip(request),
     )
     return VideoAnalysisResponse(
@@ -297,13 +299,14 @@ def upload_and_analyze_video(
 @router.post(
     "/media/{media_id}/analyze-video",
     response_model=VideoAnalysisResponse,
-    summary="Run frame sampling YOLO object detection on an already uploaded video media item",
+    summary="Run frame sampling YOLO object tracking on an already uploaded video media item",
 )
 def analyze_existing_video_media(
     media_id: int,
     request: Request,
     sample_rate_fps: Optional[int] = Query(None),
     confidence_threshold: Optional[float] = Query(None),
+    tracker_type: Optional[str] = Query("bytetrack"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> VideoAnalysisResponse:
@@ -313,6 +316,7 @@ def analyze_existing_video_media(
         user=current_user,
         sample_rate_fps=sample_rate_fps,
         conf_threshold=confidence_threshold,
+        tracker_type=tracker_type,
         ip_address=get_client_ip(request),
     )
     return VideoAnalysisResponse(
