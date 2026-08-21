@@ -132,6 +132,8 @@ class InvestigationEvent(Base):
     end_timestamp_seconds: Mapped[float] = mapped_column(Float, nullable=False)
     frame_start: Mapped[int] = mapped_column(Integer, nullable=False)
     frame_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    tracking_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     
     linked_person_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     linked_fir_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

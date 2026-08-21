@@ -165,6 +165,30 @@ def get_investigation_events(
 
 
 @router.post(
+    "/media/{media_id}/extract-events",
+    response_model=EventListResponse,
+    summary="Trigger event extraction layer on media detection results",
+)
+def extract_investigation_events(
+    media_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> EventListResponse:
+    events = services.extract_events_for_media(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        ip_address=get_client_ip(request),
+    )
+    return EventListResponse(
+        media_id=media_id,
+        events=[m for m in events],
+        total_events=len(events),
+    )
+
+
+@router.post(
     "/media/{media_id}/link-fir",
     response_model=InvestigationMediaResponse,
     summary="Link investigation media item to a specific FIR case number",

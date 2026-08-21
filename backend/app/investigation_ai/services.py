@@ -240,6 +240,80 @@ def get_media_events(db: Session, media_id: int) -> List[InvestigationEvent]:
     ).scalars().all()
 
 
+def extract_events_for_media(
+    db: Session,
+    media_id: int,
+    user: User,
+    job_id: Optional[int] = None,
+    ip_address: Optional[str] = None,
+) -> List[InvestigationEvent]:
+    media = get_media_by_id(db, media_id)
+
+    # Fetch detections for media
+    raw_detections = db.execute(
+        select(DetectionResult).where(DetectionResult.media_id == media.media_id).order_by(DetectionResult.frame_number.asc())
+    ).scalars().all()
+
+    detections_dict = []
+    for d in raw_detections:
+        detections_dict.append({
+            "detection_id": d.detection_id,
+            "frame_number": d.frame_number,
+            "timestamp_seconds": d.timestamp_seconds,
+            "object_class": d.object_class,
+            "tracking_id": d.tracking_id,
+            "confidence": d.confidence,
+            "bbox": {
+                "xmin": d.bbox_xmin,
+                "ymin": d.bbox_ymin,
+                "xmax": d.bbox_xmax,
+                "ymax": d.bbox_ymax,
+            },
+        })
+
+    from app.investigation_ai.processors.event_extractor import EventExtractor
+    extractor = EventExtractor()
+    extracted_events = extractor.extract_events(detections_dict, media_id=media.media_id, total_frames=media.total_frames)
+
+    # Delete previous events for clean re-extraction if job_id specified
+    if job_id:
+        target_job_id = job_id
+    else:
+        latest_job = db.execute(
+            select(InvestigationAnalysisJob).where(InvestigationAnalysisJob.media_id == media.media_id).order_by(InvestigationAnalysisJob.created_at.desc())
+        ).scalars().first()
+        target_job_id = latest_job.job_id if latest_job else 0
+
+    event_models = []
+    for ev in extracted_events:
+        event_rec = InvestigationEvent(
+            job_id=target_job_id,
+            media_id=media.media_id,
+            event_type=ev["event_type"],
+            description=ev["description"],
+            start_timestamp_seconds=ev["timestamp_seconds"],
+            end_timestamp_seconds=ev["timestamp_seconds"],
+            frame_start=ev["frame_number"],
+            frame_end=ev["frame_number"],
+            tracking_id=ev.get("tracking_id"),
+            confidence=ev.get("confidence"),
+            linked_fir_id=media.fir_id,
+        )
+        db.add(event_rec)
+        event_models.append(event_rec)
+
+    db.commit()
+    audit.record(
+        db,
+        action="investigation.extract_events",
+        user_id=user.user_id,
+        resource=f"media:{media.media_id}",
+        ip_address=ip_address,
+        detail={"extracted_count": len(event_models)},
+    )
+    return event_models
+
+
 def link_media_to_fir(
     db: Session,
     media_id: int,
@@ -429,6 +503,12 @@ def analyze_video_media(
                 "conf_threshold": conf_threshold or settings.CONFIDENCE_THRESHOLD,
             },
         )
+
+        # Trigger automatic event extraction
+        try:
+            extract_events_for_media(db=db, media_id=media.media_id, user=user, job_id=job.job_id, ip_address=ip_address)
+        except Exception as ev_err:
+            logger.warning(f"Automatic event extraction failed for media {media.media_id}: {ev_err}")
 
         formatted_detections = get_media_detections(db, media.media_id)
         video_meta = {

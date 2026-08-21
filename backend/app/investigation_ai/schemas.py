@@ -99,6 +99,8 @@ class EventResponse(BaseModel):
     end_timestamp_seconds: float
     frame_start: int
     frame_end: int
+    tracking_id: Optional[int] = None
+    confidence: Optional[float] = None
     linked_person_id: Optional[str] = None
     linked_fir_id: Optional[str] = None
     created_at: datetime
