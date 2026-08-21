@@ -261,3 +261,88 @@ def link_media_to_fir(
         detail={"fir_id": fir_id},
     )
     return media
+
+
+def analyze_image_media(
+    db: Session,
+    media_id: int,
+    user: User,
+    conf_threshold: Optional[float] = None,
+    ip_address: Optional[str] = None,
+) -> dict:
+    media = get_media_by_id(db, media_id)
+    if media.file_type != "image":
+        raise AppHTTPException(
+            status_code=400,
+            code="invalid_media_type",
+            detail=f"Media ID '{media_id}' is a {media.file_type}, not an image. Use video processing endpoint for videos.",
+        )
+
+    job = create_analysis_job(db=db, media_id=media.media_id, user=user, job_type="image_detection", ip_address=ip_address)
+
+    try:
+        from app.investigation_ai.processors.image_processor import ImageProcessor
+        processor = ImageProcessor(conf_threshold=conf_threshold)
+        results = processor.process_image(media.file_path)
+
+        detections_orm = []
+        for det in results.get("detections", []):
+            bbox = det["bbox"]
+            detection_rec = DetectionResult(
+                job_id=job.job_id,
+                media_id=media.media_id,
+                frame_number=0,
+                timestamp_seconds=0.0,
+                object_class=det["object_class"],
+                tracking_id=None,
+                confidence=det["confidence"],
+                bbox_xmin=bbox["xmin"],
+                bbox_ymin=bbox["ymin"],
+                bbox_xmax=bbox["xmax"],
+                bbox_ymax=bbox["ymax"],
+            )
+            db.add(detection_rec)
+            detections_orm.append(detection_rec)
+
+        job.status = "completed"
+        job.progress_pct = 100.0
+        job.completed_at = datetime.utcnow()
+        media.status = "processed"
+        db.commit()
+        db.refresh(job)
+        db.refresh(media)
+
+        audit.record(
+            db,
+            action="investigation.image_analysis",
+            user_id=user.user_id,
+            resource=f"media:{media.media_id}",
+            ip_address=ip_address,
+            detail={
+                "job_id": job.job_id,
+                "total_objects": results.get("total_objects", 0),
+                "conf_threshold": conf_threshold or settings.CONFIDENCE_THRESHOLD,
+            },
+        )
+
+        formatted_detections = get_media_detections(db, media.media_id)
+        return {
+            "media": media,
+            "job": job,
+            "image_width": results.get("image_width", 0),
+            "image_height": results.get("image_height", 0),
+            "total_detected_objects": results.get("total_objects", 0),
+            "detections": formatted_detections,
+        }
+
+    except Exception as e:
+        job.status = "failed"
+        job.error_message = str(e)
+        media.status = "failed"
+        db.commit()
+        raise AppHTTPException(
+            status_code=500,
+            code="image_processing_failed",
+            detail=f"Image analysis failed: {str(e)}",
+        )
+

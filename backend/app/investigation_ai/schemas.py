@@ -117,3 +117,15 @@ class EventListResponse(BaseModel):
 
 class LinkFIRRequest(BaseModel):
     fir_id: str
+
+
+# ── Image Analysis Direct Response ──
+
+class ImageAnalysisResponse(BaseModel):
+    media: InvestigationMediaResponse
+    job: AnalysisJobResponse
+    image_width: int
+    image_height: int
+    total_detected_objects: int
+    detections: List[DetectionResponse]
+

@@ -46,3 +46,7 @@ test_pg.py
 Thumbs.db
 .vercel
 .env*
+
+# ── AI Model Weights & Storage Uploads ──
+*.pt
+backend/storage/

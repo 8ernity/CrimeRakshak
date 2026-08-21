@@ -11,6 +11,7 @@ from app.investigation_ai.schemas import (
     AnalysisJobResponse,
     DetectionListResponse,
     EventListResponse,
+    ImageAnalysisResponse,
     InvestigationMediaListResponse,
     InvestigationMediaResponse,
     LinkFIRRequest,
@@ -181,3 +182,72 @@ def link_media_to_fir_case(
         ip_address=get_client_ip(request),
     )
     return InvestigationMediaResponse.model_validate(media)
+
+
+@router.post(
+    "/analyze-image",
+    response_model=ImageAnalysisResponse,
+    summary="Upload and perform immediate YOLO object detection on a crime scene image",
+)
+def upload_and_analyze_image(
+    request: Request,
+    file: UploadFile = File(...),
+    district_id: Optional[int] = Form(None),
+    fir_id: Optional[str] = Form(None),
+    confidence_threshold: Optional[float] = Form(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> ImageAnalysisResponse:
+    media = services.save_uploaded_media(
+        db=db,
+        file=file,
+        user=current_user,
+        district_id=district_id,
+        fir_id=fir_id,
+        ip_address=get_client_ip(request),
+    )
+    analysis_res = services.analyze_image_media(
+        db=db,
+        media_id=media.media_id,
+        user=current_user,
+        conf_threshold=confidence_threshold,
+        ip_address=get_client_ip(request),
+    )
+    return ImageAnalysisResponse(
+        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        job=AnalysisJobResponse.model_validate(analysis_res["job"]),
+        image_width=analysis_res["image_width"],
+        image_height=analysis_res["image_height"],
+        total_detected_objects=analysis_res["total_detected_objects"],
+        detections=analysis_res["detections"],
+    )
+
+
+@router.post(
+    "/media/{media_id}/analyze-image",
+    response_model=ImageAnalysisResponse,
+    summary="Run YOLO object detection on an already uploaded media item",
+)
+def analyze_existing_image_media(
+    media_id: int,
+    request: Request,
+    confidence_threshold: Optional[float] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> ImageAnalysisResponse:
+    analysis_res = services.analyze_image_media(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        conf_threshold=confidence_threshold,
+        ip_address=get_client_ip(request),
+    )
+    return ImageAnalysisResponse(
+        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        job=AnalysisJobResponse.model_validate(analysis_res["job"]),
+        image_width=analysis_res["image_width"],
+        image_height=analysis_res["image_height"],
+        total_detected_objects=analysis_res["total_detected_objects"],
+        detections=analysis_res["detections"],
+    )
+

@@ -91,6 +91,8 @@ class Settings(BaseSettings):
     ALLOWED_IMAGE_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".bmp", ".webp"]
     ALLOWED_VIDEO_EXTENSIONS: List[str] = [".mp4", ".avi", ".mov", ".mkv"]
     FRAME_SAMPLE_RATE: int = 2  # target frame sampling per second
+    YOLO_MODEL_PATH: str = "yolov8n.pt"
+    CONFIDENCE_THRESHOLD: float = 0.25
 
     # ── CORS ──
     # Comma-separated list in the environment, e.g. "http://localhost:3000".
