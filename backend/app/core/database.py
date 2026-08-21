@@ -33,6 +33,10 @@ def _init_engine():
         sqlite_uri = "sqlite:///./crimerakshak.db"
         eng = create_engine(sqlite_uri, connect_args={"check_same_thread": False})
         import app.models.rbac  # ensure models are loaded
+        try:
+            import app.investigation_ai.models
+        except Exception:
+            pass
         Base.metadata.create_all(bind=eng)
         return eng
 

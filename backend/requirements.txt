@@ -28,6 +28,10 @@ python-multipart>=0.0.9
 email-validator>=2.1.0
 clerk-backend-api>=1.0.0
 
+# ── Image & Video Processing ──
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+
 # ── Missing transitive dependencies ──
 numpy>=1.26.0
 requests>=2.31.0

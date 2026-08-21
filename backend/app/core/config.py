@@ -84,6 +84,14 @@ class Settings(BaseSettings):
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
     ACCOUNT_LOCKOUT_MINUTES: int = 15
 
+    # ── AI Video & Image Investigation ──
+    INVESTIGATION_UPLOAD_DIR: str = "storage/investigation/uploads"
+    INVESTIGATION_PROCESSED_DIR: str = "storage/investigation/processed"
+    MAX_UPLOAD_SIZE_MB: int = 500
+    ALLOWED_IMAGE_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png", ".bmp", ".webp"]
+    ALLOWED_VIDEO_EXTENSIONS: List[str] = [".mp4", ".avi", ".mov", ".mkv"]
+    FRAME_SAMPLE_RATE: int = 2  # target frame sampling per second
+
     # ── CORS ──
     # Comma-separated list in the environment, e.g. "http://localhost:3000".
     BACKEND_CORS_ORIGINS: Annotated[List[str], NoDecode] = ["http://localhost:3000"]
