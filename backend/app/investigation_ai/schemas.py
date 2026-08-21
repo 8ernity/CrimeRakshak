@@ -119,7 +119,7 @@ class LinkFIRRequest(BaseModel):
     fir_id: str
 
 
-# ── Image Analysis Direct Response ──
+# ── Image & Video Analysis Direct Responses ──
 
 class ImageAnalysisResponse(BaseModel):
     media: InvestigationMediaResponse
@@ -128,4 +128,23 @@ class ImageAnalysisResponse(BaseModel):
     image_height: int
     total_detected_objects: int
     detections: List[DetectionResponse]
+
+
+class VideoMetadata(BaseModel):
+    fps: float
+    total_frames: int
+    duration_seconds: float
+    width: int
+    height: int
+    sample_rate_fps: int
+    sampled_frames_count: int
+
+
+class VideoAnalysisResponse(BaseModel):
+    media: InvestigationMediaResponse
+    job: AnalysisJobResponse
+    video_metadata: VideoMetadata
+    total_detected_objects: int
+    detections: List[DetectionResponse]
+
 

@@ -346,3 +346,115 @@ def analyze_image_media(
             detail=f"Image analysis failed: {str(e)}",
         )
 
+
+def analyze_video_media(
+    db: Session,
+    media_id: int,
+    user: User,
+    sample_rate_fps: Optional[int] = None,
+    conf_threshold: Optional[float] = None,
+    ip_address: Optional[str] = None,
+) -> dict:
+    media = get_media_by_id(db, media_id)
+    if media.file_type != "video":
+        raise AppHTTPException(
+            status_code=400,
+            code="invalid_media_type",
+            detail=f"Media ID '{media_id}' is a {media.file_type}, not a video. Use image processing endpoint for images.",
+        )
+
+    rate_fps = sample_rate_fps if sample_rate_fps is not None and sample_rate_fps > 0 else settings.FRAME_SAMPLE_RATE
+    job = create_analysis_job(db=db, media_id=media.media_id, user=user, job_type="video_detection", ip_address=ip_address)
+
+    try:
+        from app.investigation_ai.processors.video_processor import VideoProcessor
+        processor = VideoProcessor(conf_threshold=conf_threshold)
+        
+        def update_job_progress(curr_frame: int, tot_frames: int, pct: float):
+            job.progress_pct = pct
+            db.commit()
+
+        results = processor.process_video(
+            video_path=media.file_path,
+            sample_rate_fps=rate_fps,
+            progress_callback=update_job_progress,
+        )
+
+        detections_orm = []
+        for det in results.get("detections", []):
+            bbox = det["bbox"]
+            detection_rec = DetectionResult(
+                job_id=job.job_id,
+                media_id=media.media_id,
+                frame_number=det["frame_number"],
+                timestamp_seconds=det["timestamp_seconds"],
+                object_class=det["object_class"],
+                tracking_id=None,
+                confidence=det["confidence"],
+                bbox_xmin=bbox["xmin"],
+                bbox_ymin=bbox["ymin"],
+                bbox_xmax=bbox["xmax"],
+                bbox_ymax=bbox["ymax"],
+            )
+            db.add(detection_rec)
+            detections_orm.append(detection_rec)
+
+        # Update media metadata
+        media.fps = results.get("fps")
+        media.total_frames = results.get("total_frames")
+        media.duration_seconds = results.get("duration_seconds")
+        media.status = "processed"
+
+        job.status = "completed"
+        job.progress_pct = 100.0
+        job.completed_at = datetime.utcnow()
+        db.commit()
+        db.refresh(job)
+        db.refresh(media)
+
+        audit.record(
+            db,
+            action="investigation.video_analysis",
+            user_id=user.user_id,
+            resource=f"media:{media.media_id}",
+            ip_address=ip_address,
+            detail={
+                "job_id": job.job_id,
+                "sample_rate_fps": rate_fps,
+                "total_objects": results.get("total_detected_objects", 0),
+                "sampled_frames_count": results.get("sampled_frames_count", 0),
+                "conf_threshold": conf_threshold or settings.CONFIDENCE_THRESHOLD,
+            },
+        )
+
+        formatted_detections = get_media_detections(db, media.media_id)
+        video_meta = {
+            "fps": results.get("fps", 0.0),
+            "total_frames": results.get("total_frames", 0),
+            "duration_seconds": results.get("duration_seconds", 0.0),
+            "width": results.get("width", 0),
+            "height": results.get("height", 0),
+            "sample_rate_fps": rate_fps,
+            "sampled_frames_count": results.get("sampled_frames_count", 0),
+        }
+
+        return {
+            "media": media,
+            "job": job,
+            "video_metadata": video_meta,
+            "total_detected_objects": results.get("total_detected_objects", 0),
+            "detections": formatted_detections,
+        }
+
+    except Exception as e:
+        job.status = "failed"
+        job.error_message = str(e)
+        media.status = "failed"
+        db.commit()
+        raise AppHTTPException(
+            status_code=500,
+            code="video_processing_failed",
+            detail=f"Video analysis failed: {str(e)}",
+        )
+
+

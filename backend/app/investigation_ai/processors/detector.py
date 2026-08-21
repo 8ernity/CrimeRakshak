@@ -87,3 +87,39 @@ class YOLODetector:
             "total_objects": len(detections),
             "detections": detections,
         }
+
+    def detect_objects_in_ndarray(self, frame_ndarray: Any) -> List[Dict[str, Any]]:
+        """Detect objects directly on an in-memory image/frame numpy array."""
+        model = get_yolo_model(self.model_path)
+        detections: List[Dict[str, Any]] = []
+
+        if model is not None:
+            try:
+                results = model.predict(source=frame_ndarray, conf=self.conf_threshold, verbose=False)
+                for res in results:
+                    boxes = res.boxes
+                    if boxes is None:
+                        continue
+                    for box in boxes:
+                        cls_id = int(box.cls[0].item())
+                        class_name = res.names.get(cls_id, f"class_{cls_id}")
+                        conf = float(box.conf[0].item())
+
+                        xyxy = box.xyxy[0].tolist()
+                        xmin, ymin, xmax, ymax = xyxy[0], xyxy[1], xyxy[2], xyxy[3]
+
+                        detections.append({
+                            "object_class": class_name,
+                            "confidence": round(conf, 4),
+                            "bbox": {
+                                "xmin": round(float(xmin), 2),
+                                "ymin": round(float(ymin), 2),
+                                "xmax": round(float(xmax), 2),
+                                "ymax": round(float(ymax), 2),
+                            },
+                        })
+            except Exception as e:
+                logger.error(f"Error running YOLO inference on frame ndarray: {e}")
+
+        return detections
+

@@ -16,6 +16,8 @@ from app.investigation_ai.schemas import (
     InvestigationMediaResponse,
     LinkFIRRequest,
     ProcessMediaRequest,
+    VideoAnalysisResponse,
+    VideoMetadata,
 )
 
 router = APIRouter(prefix="/investigation", tags=["investigation-ai"])
@@ -250,4 +252,75 @@ def analyze_existing_image_media(
         total_detected_objects=analysis_res["total_detected_objects"],
         detections=analysis_res["detections"],
     )
+
+
+@router.post(
+    "/analyze-video",
+    response_model=VideoAnalysisResponse,
+    summary="Upload and perform frame sampling YOLO object detection on a crime incident video",
+)
+def upload_and_analyze_video(
+    request: Request,
+    file: UploadFile = File(...),
+    district_id: Optional[int] = Form(None),
+    fir_id: Optional[str] = Form(None),
+    sample_rate_fps: Optional[int] = Form(None),
+    confidence_threshold: Optional[float] = Form(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> VideoAnalysisResponse:
+    media = services.save_uploaded_media(
+        db=db,
+        file=file,
+        user=current_user,
+        district_id=district_id,
+        fir_id=fir_id,
+        ip_address=get_client_ip(request),
+    )
+    analysis_res = services.analyze_video_media(
+        db=db,
+        media_id=media.media_id,
+        user=current_user,
+        sample_rate_fps=sample_rate_fps,
+        conf_threshold=confidence_threshold,
+        ip_address=get_client_ip(request),
+    )
+    return VideoAnalysisResponse(
+        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        job=AnalysisJobResponse.model_validate(analysis_res["job"]),
+        video_metadata=VideoMetadata.model_validate(analysis_res["video_metadata"]),
+        total_detected_objects=analysis_res["total_detected_objects"],
+        detections=analysis_res["detections"],
+    )
+
+
+@router.post(
+    "/media/{media_id}/analyze-video",
+    response_model=VideoAnalysisResponse,
+    summary="Run frame sampling YOLO object detection on an already uploaded video media item",
+)
+def analyze_existing_video_media(
+    media_id: int,
+    request: Request,
+    sample_rate_fps: Optional[int] = Query(None),
+    confidence_threshold: Optional[float] = Query(None),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> VideoAnalysisResponse:
+    analysis_res = services.analyze_video_media(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        sample_rate_fps=sample_rate_fps,
+        conf_threshold=confidence_threshold,
+        ip_address=get_client_ip(request),
+    )
+    return VideoAnalysisResponse(
+        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        job=AnalysisJobResponse.model_validate(analysis_res["job"]),
+        video_metadata=VideoMetadata.model_validate(analysis_res["video_metadata"]),
+        total_detected_objects=analysis_res["total_detected_objects"],
+        detections=analysis_res["detections"],
+    )
+
 
