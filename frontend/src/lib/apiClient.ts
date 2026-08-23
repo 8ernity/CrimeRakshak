@@ -1,7 +1,7 @@
 // In production (e.g. Vercel) NEXT_PUBLIC_API_URL is typically unset and we fall
 // back to a same-origin relative path, which the platform rewrites route to the
 // backend function (see vercel.json). Local dev sets it explicitly in .env.local.
-const API_BASE =
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1";
 
@@ -54,9 +54,12 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   let token = await getToken();
   
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     ...((options.headers as Record<string, string>) || {}),
   };
+
+  if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;

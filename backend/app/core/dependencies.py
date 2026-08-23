@@ -106,10 +106,15 @@ class MockRole:
 
 class MockUser:
     id = 1
+    user_id = 1
     username = "admin"
     email = "admin@crimerakshak.local"
     is_active = True
+    is_locked = False
     is_superuser = True
+    district_id = None
+    role_names = {"superuser"}
+    permission_codes = set()
     roles = [MockRole()]
 
 def get_current_user(

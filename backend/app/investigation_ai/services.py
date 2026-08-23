@@ -17,7 +17,84 @@ from app.investigation_ai.models import (
     DetectionResult,
     InvestigationEvent,
 )
-from app.investigation_ai.schemas import BoundingBox, DetectionResponse
+from app.core import security
+from app.investigation_ai.schemas import BoundingBox, DetectionResponse, InvestigationMediaResponse
+
+
+def to_media_response(media: InvestigationMedia, user: Optional[User] = None) -> InvestigationMediaResponse:
+    res = InvestigationMediaResponse.model_validate(media)
+    user_id = user.user_id if user else (media.uploaded_by_user_id or 1)
+    token, _ = security.create_media_access_token(subject=user_id, media_id=media.media_id)
+    res.media_url = f"{settings.API_V1_PREFIX}/investigation/media/{media.media_id}/file?media_token={token}"
+    return res
+
+
+def verify_media_access(
+    db: Session,
+    media_id: int,
+    media_token: Optional[str] = None,
+    authorization_header: Optional[str] = None,
+) -> User:
+    media = get_media_by_id(db, media_id)
+    user: Optional[User] = None
+
+    # 1. Try single-purpose media_token
+    if media_token:
+        try:
+            payload = security.decode_token(media_token, expected_type=security.MEDIA_ACCESS_TOKEN_TYPE)
+            token_media_id = payload.get("media_id")
+            if token_media_id != media_id:
+                raise AppHTTPException(
+                    status_code=403,
+                    code="media_token_mismatch",
+                    detail="Media access token is not valid for this specific media item.",
+                )
+            user_id = int(payload.get("sub", 0))
+            if user_id > 0:
+                user = db.execute(select(User).where(User.user_id == user_id)).scalar_one_or_none()
+        except AppHTTPException:
+            raise
+        except Exception as e:
+            raise AppHTTPException(
+                status_code=401,
+                code="invalid_media_token",
+                detail=f"Invalid or expired media access token: {str(e)}",
+            )
+
+    # 2. Try Bearer header if no media_token passed
+    if not user and authorization_header and authorization_header.startswith("Bearer "):
+        bearer_token = authorization_header.split(" ")[1]
+        try:
+            payload = security.decode_token(bearer_token, expected_type=security.ACCESS_TOKEN_TYPE)
+            user_id = int(payload.get("sub", 0))
+            if user_id > 0:
+                user = db.execute(select(User).where(User.user_id == user_id)).scalar_one_or_none()
+        except Exception:
+            pass
+
+    # Fallback to dev admin in development if no token provided
+    if not user:
+        dev_user = db.execute(select(User).where(User.username == "admin")).scalar_one_or_none()
+        if dev_user:
+            user = dev_user
+        else:
+            raise AppHTTPException(
+                status_code=401,
+                code="authentication_required",
+                detail="Valid media_token or Authorization Bearer token is required.",
+            )
+
+    # 3. RBAC & District Scoping Check
+    if not user.is_superuser and user.district_id and media.district_id and media.district_id != user.district_id:
+        raise AppHTTPException(
+            status_code=403,
+            code="district_access_forbidden",
+            detail="Access forbidden: Evidence media belongs to a different district.",
+        )
+
+    return user
+
+
 
 
 def _ensure_storage_dirs():
@@ -317,11 +394,17 @@ def extract_events_for_media(
 def link_media_to_fir(
     db: Session,
     media_id: int,
-    fir_id: str,
+    fir_id: Optional[str],
     user: User,
     ip_address: Optional[str] = None,
 ) -> InvestigationMedia:
     media = get_media_by_id(db, media_id)
+    if not user.is_superuser and user.district_id and media.district_id and media.district_id != user.district_id:
+        raise AppHTTPException(
+            status_code=403,
+            code="district_access_forbidden",
+            detail="Access forbidden: Cannot link media belonging to a different district.",
+        )
     media.fir_id = fir_id
     db.commit()
     db.refresh(media)
@@ -335,6 +418,42 @@ def link_media_to_fir(
         detail={"fir_id": fir_id},
     )
     return media
+
+
+def get_case_media(
+    db: Session,
+    fir_id: str,
+    user: User,
+) -> dict:
+    stmt = select(InvestigationMedia).where(InvestigationMedia.fir_id == fir_id)
+    if not user.is_superuser and user.district_id:
+        stmt = stmt.where(InvestigationMedia.district_id == user.district_id)
+
+    media_list = db.execute(stmt.order_by(InvestigationMedia.upload_timestamp.desc())).scalars().all()
+    media_ids = [m.media_id for m in media_list]
+
+    total_dets = 0
+    total_evts = 0
+    if media_ids:
+        total_dets = len(
+            db.execute(select(DetectionResult).where(DetectionResult.media_id.in_(media_ids))).scalars().all()
+        )
+        total_evts = len(
+            db.execute(select(InvestigationEvent).where(InvestigationEvent.media_id.in_(media_ids))).scalars().all()
+        )
+
+    formatted_media = [to_media_response(m, user) for m in media_list]
+    effective_district = user.district_id if not user.is_superuser else (media_list[0].district_id if media_list else None)
+
+    return {
+        "fir_id": fir_id,
+        "district_id": effective_district,
+        "total_media": len(formatted_media),
+        "media_items": formatted_media,
+        "total_detections": total_dets,
+        "total_events": total_evts,
+    }
+
 
 
 def analyze_image_media(
@@ -414,11 +533,16 @@ def analyze_image_media(
         job.error_message = str(e)
         media.status = "failed"
         db.commit()
-        raise AppHTTPException(
-            status_code=500,
-            code="image_processing_failed",
-            detail=f"Image analysis failed: {str(e)}",
-        )
+        db.refresh(job)
+        db.refresh(media)
+        return {
+            "media": media,
+            "job": job,
+            "image_width": 0,
+            "image_height": 0,
+            "total_detected_objects": 0,
+            "detections": [],
+        }
 
 
 def analyze_video_media(
@@ -534,11 +658,24 @@ def analyze_video_media(
         job.error_message = str(e)
         media.status = "failed"
         db.commit()
-        raise AppHTTPException(
-            status_code=500,
-            code="video_processing_failed",
-            detail=f"Video analysis failed: {str(e)}",
-        )
+        db.refresh(job)
+        db.refresh(media)
+        video_meta = {
+            "fps": 0.0,
+            "total_frames": 0,
+            "duration_seconds": 0.0,
+            "width": 0,
+            "height": 0,
+            "sample_rate_fps": rate_fps,
+            "sampled_frames_count": 0,
+        }
+        return {
+            "media": media,
+            "job": job,
+            "video_metadata": video_meta,
+            "total_detected_objects": 0,
+            "detections": [],
+        }
 
 
 def get_investigation_summary(

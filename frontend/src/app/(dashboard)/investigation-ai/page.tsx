@@ -17,7 +17,7 @@ import { ConfigureModal } from "./ConfigureModal";
 import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary } from "./types";
 import {
   listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis, getSummary,
-  DEMO_VIDEO_SRC,
+  getMediaUrl, DEMO_VIDEO_SRC,
 } from "@/lib/investigationApi";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -53,19 +53,26 @@ export default function InvestigationAIPage() {
   const [activeTab, setActiveTab] = useState<RightTab>("timeline");
   const [backendLive, setBackendLive] = useState<boolean | null>(null);
 
+  const [firFilter, setFirFilter] = useState<string>("");
+
   /* ── Backend Liveness Check ── */
   useEffect(() => {
     isBackendLive().then(setBackendLive);
   }, []);
 
   /* ── Load Media Library ── */
-  const fetchMediaList = useCallback(async () => {
-    const res = await listMedia();
+  const fetchMediaList = useCallback(async (filterFir?: string) => {
+    const targetFir = filterFir !== undefined ? filterFir : firFilter;
+    const res = await listMedia(targetFir.trim() || undefined);
     setMediaItems(res.items);
-    if (res.items.length > 0 && !selectedMedia) {
-      setSelectedMedia(res.items[0]);
+    if (res.items.length > 0) {
+      if (!selectedMedia || !res.items.find((m) => m.media_id === selectedMedia.media_id)) {
+        setSelectedMedia(res.items[0]);
+      }
+    } else {
+      setSelectedMedia(null);
     }
-  }, [selectedMedia]);
+  }, [firFilter, selectedMedia]);
 
   useEffect(() => {
     fetchMediaList();
@@ -117,8 +124,16 @@ export default function InvestigationAIPage() {
         { ...job, fileName: newMedia.file_name },
         ...prev,
       ]);
+
+      const [detsRes, evtsRes] = await Promise.all([
+        getDetections(newMedia.media_id),
+        getEvents(newMedia.media_id),
+      ]);
+      setDetections(detsRes.detections);
+      setEvents(evtsRes.events);
+      fetchSummary(newMedia.media_id);
     },
-    []
+    [fetchSummary]
   );
 
   /* ── Animation Variants ── */
@@ -215,9 +230,41 @@ export default function InvestigationAIPage() {
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════
-         * SECTION 2: MEDIA LIBRARY STRIP
+         * SECTION 2: MEDIA LIBRARY STRIP & FIR FILTER
          * ═══════════════════════════════════════════════════════ */}
-        <motion.div variants={fadeUp} initial="initial" animate="animate">
+        <motion.div variants={fadeUp} initial="initial" animate="animate" className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 p-3 rounded-2xl border border-slate-200/60 shadow-2xs backdrop-blur-md">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                <Link2 className="w-3.5 h-3.5" />
+              </div>
+              <span>Filter Media by Case / FIR:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={firFilter}
+                onChange={(e) => {
+                  setFirFilter(e.target.value);
+                  fetchMediaList(e.target.value);
+                }}
+                placeholder="Search by FIR (e.g. FIR-2026-044)"
+                className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 outline-none transition-all w-full sm:w-64"
+              />
+              {firFilter && (
+                <button
+                  onClick={() => {
+                    setFirFilter("");
+                    fetchMediaList("");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           <MediaLibraryStrip
             mediaItems={mediaItems}
             selectedMedia={selectedMedia}
@@ -240,12 +287,10 @@ export default function InvestigationAIPage() {
             <div className="glass-card p-2 sm:p-3 relative overflow-hidden">
               <VideoCanvasSync
                 videoRef={videoRef}
-                media={selectedMedia}
                 detections={detections}
-                videoSrc={DEMO_VIDEO_SRC}
-                currentTime={currentTime}
-                onTimeUpdate={setCurrentTime}
                 highlightedTrackId={highlightedTrackId}
+                isImage={selectedMedia?.file_type === "image"}
+                mediaSrc={getMediaUrl(selectedMedia)}
               />
             </div>
           </motion.div>
@@ -391,7 +436,13 @@ export default function InvestigationAIPage() {
                   )}
                   {activeTab === "details" && (
                     <motion.div key="details" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full p-5">
-                      <MediaMetadataPanel media={selectedMedia} />
+                      <MediaMetadataPanel
+                        media={selectedMedia}
+                        onMediaUpdated={(updated) => {
+                          setSelectedMedia(updated);
+                          fetchMediaList();
+                        }}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>

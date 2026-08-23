@@ -1,14 +1,18 @@
 """API Router for AI Video & Image Investigation Support."""
+import os
 from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_client_ip, get_current_active_user, require_permissions
+from app.core.exceptions import AppHTTPException
 from app.models.rbac import User
 from app.investigation_ai import services
 from app.investigation_ai.schemas import (
     AnalysisJobResponse,
+    CaseMediaSummaryResponse,
     DetectionListResponse,
     EventListResponse,
     GenerateSummaryRequest,
@@ -46,7 +50,7 @@ def upload_investigation_media(
         fir_id=fir_id,
         ip_address=get_client_ip(request),
     )
-    return InvestigationMediaResponse.model_validate(media)
+    return services.to_media_response(media, current_user)
 
 
 @router.get(
@@ -75,7 +79,7 @@ def list_investigation_media(
         offset=offset,
     )
     return InvestigationMediaListResponse(
-        items=[InvestigationMediaResponse.model_validate(m) for m in items],
+        items=[services.to_media_response(m, current_user) for m in items],
         total=total,
     )
 
@@ -91,7 +95,41 @@ def get_investigation_media_details(
     db: Session = Depends(get_db),
 ) -> InvestigationMediaResponse:
     media = services.get_media_by_id(db, media_id)
-    return InvestigationMediaResponse.model_validate(media)
+    return services.to_media_response(media, current_user)
+
+
+@router.get(
+    "/media/{media_id}/file",
+    summary="Stream or download investigation evidence media file",
+)
+def get_investigation_media_file(
+    media_id: int,
+    request: Request,
+    media_token: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    auth_header = request.headers.get("Authorization")
+    user = services.verify_media_access(
+        db=db,
+        media_id=media_id,
+        media_token=media_token,
+        authorization_header=auth_header,
+    )
+    media = services.get_media_by_id(db, media_id)
+    if not os.path.exists(media.file_path):
+        raise AppHTTPException(
+            status_code=404,
+            code="file_not_found",
+            detail=f"Media file for ID '{media_id}' not found on storage server.",
+        )
+
+    headers = {"Accept-Ranges": "bytes"}
+    return FileResponse(
+        path=media.file_path,
+        media_type=media.mime_type,
+        filename=media.file_name,
+        headers=headers,
+    )
 
 
 @router.post(
@@ -106,14 +144,34 @@ def process_investigation_media(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> AnalysisJobResponse:
-    job = services.create_analysis_job(
-        db=db,
-        media_id=media_id,
-        user=current_user,
-        job_type=payload.job_type,
-        ip_address=get_client_ip(request),
-    )
-    return AnalysisJobResponse.model_validate(job)
+    media = services.get_media_by_id(db, media_id)
+    if media.file_type == "image":
+        res = services.analyze_image_media(
+            db=db,
+            media_id=media_id,
+            user=current_user,
+            ip_address=get_client_ip(request),
+        )
+        return AnalysisJobResponse.model_validate(res["job"])
+    elif media.file_type == "video":
+        res = services.analyze_video_media(
+            db=db,
+            media_id=media_id,
+            user=current_user,
+            sample_rate_fps=payload.sample_rate_fps,
+            ip_address=get_client_ip(request),
+        )
+        return AnalysisJobResponse.model_validate(res["job"])
+    else:
+        job = services.create_analysis_job(
+            db=db,
+            media_id=media_id,
+            user=current_user,
+            job_type=payload.job_type,
+            ip_address=get_client_ip(request),
+        )
+        return AnalysisJobResponse.model_validate(job)
+
 
 
 @router.get(
@@ -209,7 +267,22 @@ def link_media_to_fir_case(
         user=current_user,
         ip_address=get_client_ip(request),
     )
-    return InvestigationMediaResponse.model_validate(media)
+    return services.to_media_response(media, current_user)
+
+
+@router.get(
+    "/cases/{fir_id}/media",
+    response_model=CaseMediaSummaryResponse,
+    summary="Get all investigation evidence media and summary stats for a Case/FIR number",
+)
+def get_case_investigation_media(
+    fir_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> CaseMediaSummaryResponse:
+    res = services.get_case_media(db=db, fir_id=fir_id, user=current_user)
+    return CaseMediaSummaryResponse.model_validate(res)
+
 
 
 @router.post(
@@ -242,7 +315,7 @@ def upload_and_analyze_image(
         ip_address=get_client_ip(request),
     )
     return ImageAnalysisResponse(
-        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        media=services.to_media_response(analysis_res["media"]),
         job=AnalysisJobResponse.model_validate(analysis_res["job"]),
         image_width=analysis_res["image_width"],
         image_height=analysis_res["image_height"],
@@ -271,7 +344,7 @@ def analyze_existing_image_media(
         ip_address=get_client_ip(request),
     )
     return ImageAnalysisResponse(
-        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        media=services.to_media_response(analysis_res["media"]),
         job=AnalysisJobResponse.model_validate(analysis_res["job"]),
         image_width=analysis_res["image_width"],
         image_height=analysis_res["image_height"],
@@ -314,7 +387,7 @@ def upload_and_analyze_video(
         ip_address=get_client_ip(request),
     )
     return VideoAnalysisResponse(
-        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        media=services.to_media_response(analysis_res["media"]),
         job=AnalysisJobResponse.model_validate(analysis_res["job"]),
         video_metadata=VideoMetadata.model_validate(analysis_res["video_metadata"]),
         total_detected_objects=analysis_res["total_detected_objects"],
@@ -346,12 +419,13 @@ def analyze_existing_video_media(
         ip_address=get_client_ip(request),
     )
     return VideoAnalysisResponse(
-        media=InvestigationMediaResponse.model_validate(analysis_res["media"]),
+        media=services.to_media_response(analysis_res["media"]),
         job=AnalysisJobResponse.model_validate(analysis_res["job"]),
         video_metadata=VideoMetadata.model_validate(analysis_res["video_metadata"]),
         total_detected_objects=analysis_res["total_detected_objects"],
         detections=analysis_res["detections"],
     )
+
 
 
 @router.get(
