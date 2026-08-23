@@ -25,18 +25,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.SmartToy
-
-val PrimaryGreen = Color(0xFFa3d73c)
-val BackgroundDark = Color(0xFF11150b)
-val SurfaceDark = Color(0xFF1a1d14)
-val TextLight = Color(0xFFe1e4d3)
-val TextMuted = Color(0xFF8c9383)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
