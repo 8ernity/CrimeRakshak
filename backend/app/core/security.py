@@ -18,6 +18,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Token type markers embedded in the JWT ``type`` claim.
 ACCESS_TOKEN_TYPE = "access"
 REFRESH_TOKEN_TYPE = "refresh"
+MEDIA_ACCESS_TOKEN_TYPE = "media_access"
 
 
 # ── Password hashing ──────────────────────────────────────────────────────
@@ -81,6 +82,21 @@ def create_refresh_token(subject: str | int) -> tuple[str, str, datetime]:
         REFRESH_TOKEN_TYPE,
         timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
+
+
+def create_media_access_token(
+    subject: str | int,
+    media_id: int,
+    expires_minutes: int = 15,
+) -> tuple[str, datetime]:
+    """Return ``(token, expires_at)`` for a short-lived media access token bound to media_id."""
+    token, _jti, expire = _create_token(
+        subject,
+        MEDIA_ACCESS_TOKEN_TYPE,
+        timedelta(minutes=expires_minutes),
+        {"media_id": media_id},
+    )
+    return token, expire
 
 
 def decode_token(token: str, expected_type: Optional[str] = None) -> dict[str, Any]:

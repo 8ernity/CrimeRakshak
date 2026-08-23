@@ -8,6 +8,7 @@ import { linkFIR } from "@/lib/investigationApi";
 
 interface MediaMetadataPanelProps {
   media: InvestigationMedia | null;
+  onMediaUpdated?: (updated: InvestigationMedia) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -15,7 +16,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function MediaMetadataPanel({ media }: MediaMetadataPanelProps) {
+export function MediaMetadataPanel({ media, onMediaUpdated }: MediaMetadataPanelProps) {
   const [firInput, setFirInput] = useState("");
   const [linkedFir, setLinkedFir] = useState<string | null>(media?.fir_id || null);
   const [isLinking, setIsLinking] = useState(false);
@@ -24,9 +25,22 @@ export function MediaMetadataPanel({ media }: MediaMetadataPanelProps) {
     if (!media || !firInput.trim()) return;
     setIsLinking(true);
     try {
-      await linkFIR(media.media_id, firInput.trim());
+      const updated = await linkFIR(media.media_id, firInput.trim());
       setLinkedFir(firInput.trim());
       setFirInput("");
+      if (onMediaUpdated) onMediaUpdated(updated);
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleUnlinkFIR = async () => {
+    if (!media) return;
+    setIsLinking(true);
+    try {
+      const updated = await linkFIR(media.media_id, null);
+      setLinkedFir(null);
+      if (onMediaUpdated) onMediaUpdated(updated);
     } finally {
       setIsLinking(false);
     }
@@ -107,7 +121,16 @@ export function MediaMetadataPanel({ media }: MediaMetadataPanelProps) {
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 <span className="text-sm font-bold text-emerald-700">{linkedFir || media.fir_id}</span>
               </div>
-              <span className="text-[9px] text-emerald-500/70 font-bold uppercase tracking-wider">Linked</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-emerald-500/70 font-bold uppercase tracking-wider">Linked</span>
+                <button
+                  onClick={handleUnlinkFIR}
+                  disabled={isLinking}
+                  className="text-[10px] font-bold text-red-500 hover:text-red-700 underline transition-colors"
+                >
+                  Unlink
+                </button>
+              </div>
             </motion.div>
           ) : (
             <div className="flex gap-2">
