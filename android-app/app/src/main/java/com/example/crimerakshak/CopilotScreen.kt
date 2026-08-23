@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.crimerakshak.viewmodel.CopilotViewModel
+import com.example.crimerakshak.viewmodel.ChatMessage
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,7 +38,10 @@ import androidx.compose.material.icons.filled.SmartToy
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CopilotScreen() {
+fun CopilotScreen(
+    viewModel: CopilotViewModel = viewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
     var query by remember { mutableStateOf("") }
     var isListening by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -78,61 +84,32 @@ fun CopilotScreen() {
             Icon(Icons.Filled.History, contentDescription = null, tint = TextMuted)
         }
 
-        // Chat Area Mockup
-        Column(
-            modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+        // Chat Area
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // First message (AI)
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                    Icon(Icons.Filled.SmartToy, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("TACTICAL AI", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Box(modifier = Modifier.background(SurfaceDark, RoundedCornerShape(12.dp)).padding(16.dp)) {
-                    Text("Good morning, Officer. How can I assist your patrol today?", color = TextLight, fontSize = 16.sp)
-                }
-            }
-
-            // Second message (User)
-            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-                Text("OFFICER 402", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                Row {
-                    Spacer(modifier = Modifier.weight(0.1f))
-                    Box(modifier = Modifier.weight(0.9f).background(SurfaceDark, RoundedCornerShape(12.dp)).border(1.dp, PrimaryGreen, RoundedCornerShape(12.dp)).padding(16.dp)) {
-                        Text("Give me a summary of incidents in Sector 4 over the last 2 hours.", color = TextLight, fontSize = 16.sp)
-                    }
-                }
-            }
-
-            // Third message (AI summary)
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                    Icon(Icons.Filled.SmartToy, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("TACTICAL AI", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Box(modifier = Modifier.background(SurfaceDark, RoundedCornerShape(12.dp)).padding(16.dp)) {
-                    Column {
-                        Text("Sector 4 Summary:", color = PrimaryGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-                        Row(modifier = Modifier.padding(bottom = 8.dp)) {
-                            Text("•", color = PrimaryGreen, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
-                            Text("2 Domestic Disturbance calls reported.", color = TextLight, fontSize = 16.sp)
-                        }
-                        Row(modifier = Modifier.padding(bottom = 16.dp)) {
-                            Text("•", color = PrimaryGreen, fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
-                            Text("1 Traffic accident at 4th and Main.", color = TextLight, fontSize = 16.sp)
-                        }
-                        Box(modifier = Modifier.fillMaxWidth().background(BackgroundDark, RoundedCornerShape(8.dp)).padding(12.dp)) {
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("STATUS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Text("Patrol Unit 12 is on-site at Main St.", color = TextLight, fontSize = 12.sp)
+            items(state.messages.size) { index ->
+                val message = state.messages[index]
+                if (message.isUser) {
+                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+                        Text("OFFICER 402", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                        Row {
+                            Spacer(modifier = Modifier.weight(0.1f))
+                            Box(modifier = Modifier.weight(0.9f).background(SurfaceDark, RoundedCornerShape(12.dp)).border(1.dp, PrimaryGreen, RoundedCornerShape(12.dp)).padding(16.dp)) {
+                                Text(message.text, color = TextLight, fontSize = 16.sp)
                             }
+                        }
+                    }
+                } else {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                            Icon(Icons.Filled.SmartToy, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("TACTICAL AI", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Box(modifier = Modifier.background(SurfaceDark, RoundedCornerShape(12.dp)).padding(16.dp)) {
+                            Text(message.text, color = TextLight, fontSize = 16.sp)
                         }
                     }
                 }
@@ -186,7 +163,12 @@ fun CopilotScreen() {
             )
             Spacer(modifier = Modifier.width(8.dp))
             FloatingActionButton(
-                onClick = { /* Send */ },
+                onClick = {
+                    if (query.isNotBlank()) {
+                        viewModel.sendMessage(query)
+                        query = ""
+                    }
+                },
                 containerColor = SurfaceDark,
                 shape = CircleShape
             ) {
