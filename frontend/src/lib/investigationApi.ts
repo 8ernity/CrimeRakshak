@@ -7,7 +7,7 @@
  * code changes required.
  * ───────────────────────────────────────────────────────────── */
 
-import { fetchAPI } from "@/lib/apiClient";
+import { fetchAPI, API_BASE } from "@/lib/apiClient";
 import type {
   InvestigationMedia,
   AnalysisJob,
@@ -16,6 +16,7 @@ import type {
   MediaListResponse,
   DetectionListResponse,
   EventListResponse,
+  CaseMediaSummaryResponse,
 } from "@/app/(dashboard)/investigation-ai/types";
 
 /* ── Connection state ── */
@@ -182,11 +183,15 @@ const DEMO_EVENTS: InvestigationEvent[] = [
  * PUBLIC API FUNCTIONS
  * ═══════════════════════════════════════════════════════════════ */
 
-export async function listMedia(): Promise<MediaListResponse> {
+export async function listMedia(firId?: string): Promise<MediaListResponse> {
   try {
-    return await fetchAPI("/investigation/media?limit=50&offset=0");
+    const url = firId 
+      ? `/investigation/media?fir_id=${encodeURIComponent(firId)}&limit=50&offset=0`
+      : "/investigation/media?limit=50&offset=0";
+    return await fetchAPI(url);
   } catch {
-    return { items: DEMO_MEDIA, total: DEMO_MEDIA.length };
+    const items = firId ? DEMO_MEDIA.filter((m) => m.fir_id === firId) : DEMO_MEDIA;
+    return { items, total: items.length };
   }
 }
 
@@ -298,7 +303,7 @@ export async function getEvents(mediaId: number): Promise<EventListResponse> {
   }
 }
 
-export async function linkFIR(mediaId: number, firId: string): Promise<InvestigationMedia> {
+export async function linkFIR(mediaId: number, firId: string | null): Promise<InvestigationMedia> {
   try {
     return await fetchAPI(`/investigation/media/${mediaId}/link-fir`, {
       method: "POST",
@@ -308,6 +313,22 @@ export async function linkFIR(mediaId: number, firId: string): Promise<Investiga
     const media = DEMO_MEDIA.find((m) => m.media_id === mediaId);
     if (media) media.fir_id = firId;
     return media || DEMO_MEDIA[0];
+  }
+}
+
+export async function getCaseMedia(firId: string): Promise<CaseMediaSummaryResponse> {
+  try {
+    return await fetchAPI(`/investigation/cases/${encodeURIComponent(firId)}/media`);
+  } catch {
+    const items = DEMO_MEDIA.filter((m) => m.fir_id === firId || firId === "FIR-2026-044");
+    return {
+      fir_id: firId,
+      district_id: 1,
+      total_media: items.length,
+      media_items: items,
+      total_detections: items.length * 8,
+      total_events: items.length * 3,
+    };
   }
 }
 
@@ -354,4 +375,16 @@ export async function getSummary(
 
 /** Public demo video URL for offline mode */
 export const DEMO_VIDEO_SRC = DEMO_VIDEO_URL;
+
+export function getMediaUrl(media: InvestigationMedia | null): string {
+  if (!media) return DEMO_VIDEO_URL;
+  if (media.media_url) {
+    const root = API_BASE.replace(/\/api\/v1\/?$/, "");
+    return media.media_url.startsWith("http")
+      ? media.media_url
+      : `${root}${media.media_url}`;
+  }
+  return DEMO_VIDEO_URL;
+}
+
 

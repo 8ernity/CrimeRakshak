@@ -24,6 +24,7 @@ class InvestigationMediaResponse(InvestigationMediaBase):
     uploaded_by_user_id: Optional[int] = None
     status: str
     upload_timestamp: datetime
+    media_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -115,10 +116,20 @@ class EventListResponse(BaseModel):
     total_events: int
 
 
-# ── FIR Linking ──
+# ── FIR / Case Linking & Aggregation ──
 
 class LinkFIRRequest(BaseModel):
+    fir_id: Optional[str] = None
+
+
+class CaseMediaSummaryResponse(BaseModel):
     fir_id: str
+    district_id: Optional[int] = None
+    total_media: int
+    media_items: List[InvestigationMediaResponse]
+    total_detections: int
+    total_events: int
+
 
 
 # ── Image & Video Analysis Direct Responses ──

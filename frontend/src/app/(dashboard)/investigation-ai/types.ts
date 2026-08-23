@@ -55,6 +55,7 @@ export interface InvestigationMedia {
   uploaded_by_user_id: number | null;
   status: string;
   upload_timestamp: string;
+  media_url?: string | null;
 }
 
 export interface AnalysisJob {
@@ -86,6 +87,15 @@ export interface EventListResponse {
 export interface MediaListResponse {
   items: InvestigationMedia[];
   total: number;
+}
+
+export interface CaseMediaSummaryResponse {
+  fir_id: string;
+  district_id: number | null;
+  total_media: number;
+  media_items: InvestigationMedia[];
+  total_detections: number;
+  total_events: number;
 }
 
 export interface InvestigationSummary {

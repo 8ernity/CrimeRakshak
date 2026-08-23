@@ -15,6 +15,7 @@ interface UploadEvidenceModalProps {
 export function UploadEvidenceModal({ isOpen, onClose, onUploadComplete }: UploadEvidenceModalProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [firId, setFirId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -43,7 +44,7 @@ export function UploadEvidenceModal({ isOpen, onClose, onUploadComplete }: Uploa
     }, 300);
 
     try {
-      const media = await uploadMedia(selectedFile);
+      const media = await uploadMedia(selectedFile, undefined, firId.trim() || undefined);
       setUploadProgress(100);
       clearInterval(interval);
 
@@ -61,6 +62,7 @@ export function UploadEvidenceModal({ isOpen, onClose, onUploadComplete }: Uploa
 
   const resetState = () => {
     setSelectedFile(null);
+    setFirId("");
     setIsUploading(false);
     setUploadProgress(0);
   };
@@ -153,6 +155,21 @@ export function UploadEvidenceModal({ isOpen, onClose, onUploadComplete }: Uploa
                   </div>
                 </>
               )}
+            </div>
+
+            {/* FIR / Case Link Input */}
+            <div className="mt-3">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                Link Case / FIR Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={firId}
+                onChange={(e) => setFirId(e.target.value)}
+                placeholder="e.g. FIR-2026-044"
+                disabled={isUploading}
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-300 outline-none transition-all"
+              />
             </div>
 
             {/* Progress bar */}
