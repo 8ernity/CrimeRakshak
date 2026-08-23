@@ -25,6 +25,8 @@ import {
   Banknote,
   ShieldCheck,
   LogOut,
+  Video,
+  Radar,
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -60,12 +62,14 @@ const navSections: NavSection[] = [
       { href: "/profiling", label: "Offender Profiles", icon: Fingerprint },
       { href: "/case-intel", label: "Case Intelligence", icon: FileSearch },
       { href: "/financial", label: "Financial Trails", icon: Banknote },
+      { href: "/investigation-ai", label: "AI Investigation", icon: Video },
     ],
   },
   {
     title: "AI & Prediction",
     items: [
       { href: "/ai-prediction", label: "AI Prediction", icon: Brain },
+      { href: "/predictive-hotspots", label: "Predictive Hotspots", icon: Radar },
       { href: "/ai-assistant", label: "AI Copilot", icon: MessageSquare },
       { href: "/alerts", label: "Alert Center", icon: Bell },
       { href: "/simulator", label: "Digital Twin", icon: Cpu },

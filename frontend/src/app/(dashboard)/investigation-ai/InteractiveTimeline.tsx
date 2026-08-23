@@ -1,0 +1,144 @@
+"use client";
+
+import React, { useState } from "react";
+import { motion } from "motion/react";
+import { Clock, Activity, AlertTriangle, Car, LogOut, Filter } from "lucide-react";
+import type { InvestigationEvent } from "./types";
+
+const EVENT_CONFIG: Record<string, { icon: React.ElementType; bg: string; border: string; iconColor: string; badge: string }> = {
+  person_entered_frame: { icon: Activity, bg: "bg-blue-50", border: "border-blue-100 hover:border-blue-300", iconColor: "text-blue-500", badge: "Entry" },
+  possible_person_down: { icon: AlertTriangle, bg: "bg-red-50", border: "border-red-100 hover:border-red-300", iconColor: "text-red-500", badge: "Anomaly" },
+  vehicle_detected: { icon: Car, bg: "bg-amber-50", border: "border-amber-100 hover:border-amber-300", iconColor: "text-amber-500", badge: "Vehicle" },
+  person_exited_frame: { icon: LogOut, bg: "bg-slate-50", border: "border-slate-200 hover:border-slate-300", iconColor: "text-slate-400", badge: "Exit" },
+};
+
+const DEFAULT_CONFIG = { icon: Clock, bg: "bg-slate-50", border: "border-slate-200 hover:border-slate-300", iconColor: "text-slate-400", badge: "Event" };
+
+interface InteractiveTimelineProps {
+  events: InvestigationEvent[];
+  onJumpToTimestamp: (timeSeconds: number) => void;
+}
+
+export function InteractiveTimeline({ events, onJumpToTimestamp }: InteractiveTimelineProps) {
+  const [filterType, setFilterType] = useState<string | null>(null);
+
+  const filtered = filterType ? events.filter(e => e.event_type === filterType) : events;
+  const uniqueTypes = Array.from(new Set(events.map(e => e.event_type)));
+
+  const containerVariants = {
+    initial: {},
+    animate: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
+  };
+  const itemVariants = {
+    initial: { opacity: 0, x: 16 },
+    animate: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
+  };
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden relative">
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/5 blur-[60px] rounded-full pointer-events-none" />
+
+      {/* Header */}
+      <div className="px-5 pt-5 pb-3 relative z-10">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-slate-900 tracking-tight text-base">Event Timeline</h3>
+          <span className="px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+            {filtered.length} Events
+          </span>
+        </div>
+
+        {/* Filter Pills */}
+        {uniqueTypes.length > 1 && (
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setFilterType(null)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                filterType === null
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              All
+            </button>
+            {uniqueTypes.map(type => {
+              const cfg = EVENT_CONFIG[type] || DEFAULT_CONFIG;
+              return (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type === filterType ? null : type)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 ${
+                    filterType === type
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : `${cfg.bg} ${cfg.iconColor} hover:opacity-80`
+                  }`}
+                >
+                  {cfg.badge}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      <div className="flex-1 overflow-y-auto px-5 pb-5 scrollbar-hide relative z-10">
+        <motion.div
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          className="flex flex-col gap-3 relative"
+        >
+          {/* Vertical connector */}
+          <div className="absolute left-5 top-3 bottom-3 w-px bg-gradient-to-b from-slate-200 via-slate-200 to-transparent" />
+
+          {filtered.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <span className="text-sm font-medium text-slate-400">No events to display.</span>
+            </div>
+          )}
+
+          {filtered.map((event) => {
+            const cfg = EVENT_CONFIG[event.event_type] || DEFAULT_CONFIG;
+            const Icon = cfg.icon;
+
+            return (
+              <motion.div
+                key={event.event_id}
+                variants={itemVariants}
+                whileHover={{ x: 4 }}
+                onClick={() => onJumpToTimestamp(event.start_timestamp_seconds)}
+                className="flex gap-3 cursor-pointer group"
+              >
+                {/* Timeline node */}
+                <div className="relative z-10 mt-1 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center group-hover:scale-110 group-hover:shadow-md transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
+                    <Icon className={`w-4 h-4 ${cfg.iconColor}`} />
+                  </div>
+                </div>
+
+                {/* Event card */}
+                <div className={`flex-1 p-3.5 rounded-xl border shadow-sm transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:shadow-md ${cfg.bg} ${cfg.border}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wide">
+                      {event.event_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+                      {event.start_timestamp_seconds.toFixed(1)}s
+                    </span>
+                  </div>
+                  <p className="text-[12px] leading-relaxed text-slate-600">{event.description}</p>
+                  {event.tracking_id !== null && (
+                    <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-white/80 border border-slate-200/60 text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                      Track #{event.tracking_id}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </div>
+  );
+}

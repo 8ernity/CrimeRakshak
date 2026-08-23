@@ -81,7 +81,7 @@ export default function NetworkPage() {
 
       let name = `Node-${i + 1}`;
       if (isAccused || isVictim) {
-        name = `${namesPool[i % namesPool.length]} ${i > 25 ? `#${i + 1}` : ""}`.strip ? `${namesPool[i % namesPool.length]} #${i + 1}` : `${namesPool[i % namesPool.length]}`;
+        name = i > 25 ? `${namesPool[i % namesPool.length]} #${i + 1}` : namesPool[i % namesPool.length];
       } else if (isLocation) {
         name = locsPool[i % locsPool.length];
       } else {

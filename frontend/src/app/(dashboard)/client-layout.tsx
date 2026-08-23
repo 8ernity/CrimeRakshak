@@ -23,8 +23,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
           {/* Gradient Matrix Box */}
           <div className="absolute inset-0 pointer-events-none z-0">
             <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.04] dark:opacity-[0.07]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-white/20 dark:to-black/20" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-white/10 dark:to-black/10" />
           </div>
           <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 scrollbar-hide relative z-10">
             <Header />
