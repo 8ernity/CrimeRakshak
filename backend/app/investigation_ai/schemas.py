@@ -150,3 +150,27 @@ class VideoAnalysisResponse(BaseModel):
     detections: List[DetectionResponse]
 
 
+# ── LLM Investigation Summary ──
+
+class GenerateSummaryRequest(BaseModel):
+    force_refresh: Optional[bool] = False
+
+
+class SummaryResponse(BaseModel):
+    summary_id: Optional[int] = None
+    media_id: int
+    job_id: Optional[int] = None
+    summary_text: str
+    observed_events: List[str] = Field(default_factory=list)
+    relevant_timestamps: List[str] = Field(default_factory=list)
+    detected_objects_summary: List[str] = Field(default_factory=list)
+    evidence_references: List[str] = Field(default_factory=list)
+    uncertainty_limitations: List[str] = Field(default_factory=list)
+    provider_used: str = "llm"
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+

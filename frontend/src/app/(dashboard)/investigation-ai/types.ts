@@ -87,3 +87,18 @@ export interface MediaListResponse {
   items: InvestigationMedia[];
   total: number;
 }
+
+export interface InvestigationSummary {
+  summary_id?: number | null;
+  media_id: number;
+  job_id?: number | null;
+  summary_text: string;
+  observed_events: string[];
+  relevant_timestamps: string[];
+  detected_objects_summary: string[];
+  evidence_references: string[];
+  uncertainty_limitations: string[];
+  provider_used: string;
+  created_at: string;
+}
+

@@ -4,7 +4,7 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Upload, Camera, Settings, Activity, Loader2, Wifi, WifiOff,
-  Video, Zap, Shield, Crosshair,
+  Video, Zap, Shield, Crosshair, Sparkles, RefreshCw, AlertTriangle, FileText, Link2, Clock, Target
 } from "lucide-react";
 import { VideoCanvasSync } from "./VideoCanvasSync";
 import { InteractiveTimeline } from "./InteractiveTimeline";
@@ -14,20 +14,21 @@ import { MediaMetadataPanel } from "./MediaMetadataPanel";
 import { MediaLibraryStrip } from "./MediaLibraryStrip";
 import { UploadEvidenceModal } from "./UploadEvidenceModal";
 import { ConfigureModal } from "./ConfigureModal";
-import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob } from "./types";
+import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary } from "./types";
 import {
-  listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis,
+  listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis, getSummary,
   DEMO_VIDEO_SRC,
 } from "@/lib/investigationApi";
 
 /* ═══════════════════════════════════════════════════════════════
  * RIGHT PANEL TABS
  * ═══════════════════════════════════════════════════════════════ */
-type RightTab = "timeline" | "tracks" | "details";
+type RightTab = "timeline" | "tracks" | "summary" | "details";
 
 const TAB_CONFIG: { id: RightTab; label: string; icon: React.ElementType }[] = [
   { id: "timeline", label: "Timeline", icon: Activity },
   { id: "tracks", label: "Tracks", icon: Crosshair },
+  { id: "summary", label: "LLM Summary", icon: Sparkles },
   { id: "details", label: "Details", icon: Shield },
 ];
 
@@ -44,168 +45,172 @@ export default function InvestigationAIPage() {
   const [selectedMedia, setSelectedMedia] = useState<InvestigationMedia | null>(null);
   const [detections, setDetections] = useState<Detection[]>([]);
   const [events, setEvents] = useState<InvestigationEvent[]>([]);
+  const [summaryData, setSummaryData] = useState<InvestigationSummary | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
+  const [activeJobs, setActiveJobs] = useState<(AnalysisJob & { fileName?: string })[]>([]);
+  const [currentTime, setCurrentTime] = useState(0);
   const [highlightedTrackId, setHighlightedTrackId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RightTab>("timeline");
-  const [isMediaLoading, setIsMediaLoading] = useState(true);
-  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [backendLive, setBackendLive] = useState<boolean | null>(null);
-  const [activeJobs, setActiveJobs] = useState<(AnalysisJob & { fileName?: string })[]>([]);
 
-  /* ── Initial Data Load ── */
+  /* ── Backend Liveness Check ── */
   useEffect(() => {
-    (async () => {
-      const live = await isBackendLive();
-      setBackendLive(live);
-
-      const result = await listMedia();
-      setMediaItems(result.items);
-      setIsMediaLoading(false);
-
-      // Auto-select first item
-      if (result.items.length > 0) {
-        handleSelectMedia(result.items[0]);
-      }
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /* ── Media Selection ── */
-  const handleSelectMedia = useCallback(async (media: InvestigationMedia) => {
-    setSelectedMedia(media);
-    setHighlightedTrackId(null);
-    setIsAnalysisLoading(true);
-
-    const [detsRes, evtsRes] = await Promise.all([
-      getDetections(media.media_id),
-      getEvents(media.media_id),
-    ]);
-    setDetections(detsRes.detections);
-    setEvents(evtsRes.events);
-    setIsAnalysisLoading(false);
+    isBackendLive().then(setBackendLive);
   }, []);
 
-  /* ── Timestamp Jump ── */
-  const handleJumpToTimestamp = useCallback((timeSeconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = timeSeconds;
-      videoRef.current.play().catch(() => {});
+  /* ── Load Media Library ── */
+  const fetchMediaList = useCallback(async () => {
+    const res = await listMedia();
+    setMediaItems(res.items);
+    if (res.items.length > 0 && !selectedMedia) {
+      setSelectedMedia(res.items[0]);
+    }
+  }, [selectedMedia]);
+
+  useEffect(() => {
+    fetchMediaList();
+  }, [fetchMediaList]);
+
+  /* ── Load Detections, Events & Summary for Selected Media ── */
+  const fetchSummary = useCallback(async (mediaId: number, forceRefresh = false) => {
+    setIsGeneratingSummary(true);
+    try {
+      const data = await getSummary(mediaId, forceRefresh);
+      setSummaryData(data);
+    } catch {
+      setSummaryData(null);
+    } finally {
+      setIsGeneratingSummary(false);
     }
   }, []);
 
-  /* ── Upload Complete ── */
-  const handleUploadComplete = useCallback((media: InvestigationMedia) => {
-    setMediaItems((prev) => [media, ...prev]);
-    handleSelectMedia(media);
+  useEffect(() => {
+    if (!selectedMedia) return;
+    const mId = selectedMedia.media_id;
+    getDetections(mId).then((res) => setDetections(res.detections));
+    getEvents(mId).then((res) => setEvents(res.events));
+    fetchSummary(mId);
+    setHighlightedTrackId(null);
+  }, [selectedMedia, fetchSummary]);
 
-    // Trigger analysis job
-    (async () => {
-      const job = await triggerAnalysis(media.media_id);
-      setActiveJobs((prev) => [{ ...job, fileName: media.file_name }, ...prev]);
+  /* ── Jump To Timestamp Handler ── */
+  const handleJumpToTimestamp = useCallback((sec: number) => {
+    setCurrentTime(sec);
+    if (videoRef.current) {
+      videoRef.current.currentTime = sec;
+    }
+  }, []);
 
-      // Simulate job completion
-      setTimeout(async () => {
-        setActiveJobs((prev) =>
-          prev.map((j) =>
-            j.job_id === job.job_id ? { ...j, status: "completed" as const, progress_pct: 100 } : j
-          )
-        );
-        // Re-fetch detections after "analysis"
-        const [detsRes, evtsRes] = await Promise.all([
-          getDetections(media.media_id),
-          getEvents(media.media_id),
-        ]);
-        setDetections(detsRes.detections);
-        setEvents(evtsRes.events);
-      }, 5000);
-    })();
-  }, [handleSelectMedia]);
+  /* ── Select Media Item ── */
+  const handleSelectMedia = useCallback((media: InvestigationMedia) => {
+    setSelectedMedia(media);
+  }, []);
 
-  /* ── Media Source ── */
-  const mediaSrc = selectedMedia
-    ? backendLive
-      ? `/api/v1/investigation/media/${selectedMedia.media_id}/file`
-      : DEMO_VIDEO_SRC
-    : undefined;
+  /* ── Upload Complete Callback ── */
+  const handleUploadComplete = useCallback(
+    async (newMedia: InvestigationMedia) => {
+      setMediaItems((prev) => [newMedia, ...prev]);
+      setSelectedMedia(newMedia);
 
-  const isImage = selectedMedia?.file_type === "image";
+      const job = await triggerAnalysis(newMedia.media_id);
+      setActiveJobs((prev) => [
+        { ...job, fileName: newMedia.file_name },
+        ...prev,
+      ]);
+    },
+    []
+  );
 
-  /* ── Framer Motion Variants ── */
-  const stagger = {
-    initial: {},
-    animate: { transition: { staggerChildren: 0.12, delayChildren: 0.05 } },
-  };
+  /* ── Animation Variants ── */
+  const stagger = { animate: { transition: { staggerChildren: 0.08 } } };
   const fadeUp = {
-    initial: { opacity: 0, y: 24 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
+    initial: { opacity: 0, y: 16 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* ── Background decorators ── */}
-      <div className="absolute top-[-8%] right-[-4%] w-[600px] h-[600px] bg-blue-400/8 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-8%] left-[-4%] w-[500px] h-[500px] bg-purple-400/8 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-[40%] left-[50%] w-[400px] h-[400px] bg-emerald-400/5 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen pb-16 font-sans antialiased text-slate-800 selection:bg-blue-500 selection:text-white">
+      {/* Dynamic ambient backdrop light */}
+      <div className="fixed top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-blue-500/5 via-indigo-500/3 to-transparent pointer-events-none z-0" />
 
-      <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8 flex flex-col gap-6 lg:gap-8">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pt-4 relative z-10">
 
         {/* ═══════════════════════════════════════════════════════
-         * SECTION 1: COMMAND HEADER
+         * SECTION 1: TOP HEADER BAR
          * ═══════════════════════════════════════════════════════ */}
         <motion.div
-          initial={{ opacity: 0, y: -16 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10"
+          transition={{ duration: 0.4 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 border-b border-slate-200/60"
         >
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl lg:text-[2.75rem] font-black text-slate-900 tracking-tight hero-headline not-italic">
-                Investigation{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600">
-                  AI Support
-                </span>
-              </h1>
-
-              {/* Connection badge */}
-              {backendLive !== null && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border shadow-sm ${
-                    backendLive
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                      : "bg-amber-50 border-amber-200 text-amber-600"
-                  }`}
-                >
-                  {backendLive ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                  {backendLive ? "Live" : "Demo"}
-                </motion.div>
-              )}
+          {/* Title & Badge */}
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md shadow-blue-500/20">
+              <Camera className="w-5 h-5" />
             </div>
-            <p className="text-slate-500 font-medium text-sm max-w-xl">
-              Computer vision tracking, anomaly detection, and event extraction — powered by YOLOv8 & ByteTrack.
-            </p>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  AI Video & Image Investigation
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 text-[11px] font-bold tracking-wide uppercase">
+                  YOLOv8 + ByteTrack
+                </span>
+              </div>
+              <p className="text-xs font-medium text-slate-500 mt-0.5">
+                Forensic multi-object tracking, automated event detection & chain of custody
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <motion.button
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.96 }}
+          {/* Controls & Connection Status */}
+          <div className="flex items-center gap-2.5">
+            {/* Liveness pill */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold transition-all ${
+                backendLive
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : backendLive === false
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200"
+              }`}
+              title={
+                backendLive
+                  ? "Backend API Connected (PostgreSQL/SQLite)"
+                  : "Offline Demo Mode Active"
+              }
+            >
+              {backendLive ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>API Live</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Demo Mode</span>
+                </>
+              )}
+            </div>
+
+            {/* Config Button */}
+            <button
               onClick={() => setIsConfigModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 border border-slate-200/60 shadow-sm backdrop-blur-md text-slate-600 font-semibold hover:bg-white hover:border-slate-300 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-2xs hover:shadow-xs transition-all duration-200"
+              title="Configure Detection Thresholds"
             >
               <Settings className="w-4 h-4" />
-              Configure
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.96 }}
+            </button>
+
+            {/* Upload CTA */}
+            <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-slate-900 text-white font-bold shadow-[0_8px_24px_rgba(15,23,42,0.2)] hover:shadow-[0_12px_30px_rgba(15,23,42,0.3)] hover:bg-slate-800 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] relative overflow-hidden group"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-xs tracking-wide shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-white/15 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               <Upload className="w-4 h-4" />
-              Upload Evidence
-            </motion.button>
+              <span>Upload Evidence</span>
+            </button>
           </div>
         </motion.div>
 
@@ -213,86 +218,43 @@ export default function InvestigationAIPage() {
          * SECTION 2: MEDIA LIBRARY STRIP
          * ═══════════════════════════════════════════════════════ */}
         <motion.div variants={fadeUp} initial="initial" animate="animate">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Video className="w-4 h-4 text-slate-400" />
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Evidence Library</h2>
-            </div>
-            <span className="text-[11px] font-semibold text-slate-400">{mediaItems.length} items</span>
-          </div>
           <MediaLibraryStrip
             mediaItems={mediaItems}
-            selectedMediaId={selectedMedia?.media_id ?? null}
+            selectedMedia={selectedMedia}
             onSelectMedia={handleSelectMedia}
-            isLoading={isMediaLoading}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
           />
         </motion.div>
 
         {/* ═══════════════════════════════════════════════════════
-         * SECTION 3: ANALYSIS STAGE (Video + Right Panel)
+         * SECTION 3: MAIN WORKSPACE (2-COLUMN GRID)
          * ═══════════════════════════════════════════════════════ */}
         <motion.div
           variants={stagger}
           initial="initial"
           animate="animate"
-          className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6"
         >
-          {/* Left: Video/Image Canvas */}
-          <motion.div variants={fadeUp} className="lg:col-span-2">
-            <div className="glass-card w-full flex flex-col p-2 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/8 blur-[80px] rounded-full pointer-events-none group-hover:bg-blue-500/15 transition-all duration-700" />
-
-              {/* Source Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200/30 mb-1 relative z-10">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-indigo-50 border border-indigo-100/60 shadow-sm">
-                    <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                  </div>
-                  <span className="font-bold text-slate-800 tracking-tight text-sm truncate max-w-[300px]">
-                    {selectedMedia ? selectedMedia.file_name : "No media selected"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100/60 shadow-sm">
-                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-wider">
-                    {isAnalysisLoading ? "Loading" : "Sync Active"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Canvas Area */}
-              <div className="w-full aspect-video relative rounded-xl overflow-hidden border border-slate-200/20 shadow-inner bg-slate-950">
-                {selectedMedia && mediaSrc ? (
-                  <VideoCanvasSync
-                    videoRef={videoRef}
-                    detections={detections}
-                    highlightedTrackId={highlightedTrackId}
-                    isImage={isImage}
-                    mediaSrc={mediaSrc}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-slate-500">Select evidence from the library above.</span>
-                  </div>
-                )}
-
-                {isAnalysisLoading && (
-                  <div className="absolute inset-0 bg-slate-950/60 flex items-center justify-center z-20">
-                    <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/90 backdrop-blur-md shadow-xl border border-white/40">
-                      <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-                      <span className="text-sm font-bold text-slate-800">Loading analysis data…</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* ── LEFT COLUMN: CANVAS PLAYER & METRICS (7 COLS) ── */}
+          <motion.div variants={fadeUp} className="lg:col-span-7 space-y-4">
+            <div className="glass-card p-2 sm:p-3 relative overflow-hidden">
+              <VideoCanvasSync
+                videoRef={videoRef}
+                media={selectedMedia}
+                detections={detections}
+                videoSrc={DEMO_VIDEO_SRC}
+                currentTime={currentTime}
+                onTimeUpdate={setCurrentTime}
+                highlightedTrackId={highlightedTrackId}
+              />
             </div>
           </motion.div>
 
-          {/* Right: Tabbed Panel */}
-          <motion.div variants={fadeUp} className="lg:col-span-1">
-            <div className="glass-card w-full h-full flex flex-col overflow-hidden min-h-[400px] lg:min-h-0">
-              {/* Tab bar */}
-              <div className="flex border-b border-slate-200/30 px-2 pt-2 relative z-10">
+          {/* ── RIGHT COLUMN: INSPECTOR & TIMELINE TABS (5 COLS) ── */}
+          <motion.div variants={fadeUp} className="lg:col-span-5 flex flex-col h-[520px]">
+            <div className="glass-card flex flex-col h-full overflow-hidden">
+              {/* Tab Header Bar */}
+              <div className="flex border-b border-slate-200/60 bg-slate-50/50 p-1 rounded-t-2xl gap-1">
                 {TAB_CONFIG.map((tab) => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
@@ -302,8 +264,8 @@ export default function InvestigationAIPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold uppercase tracking-wider rounded-t-xl transition-all duration-300 ${
                         isActive
-                          ? "bg-white/60 text-slate-800 shadow-sm border-b-2 border-blue-500"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-white/30"
+                          ? "bg-white text-slate-800 shadow-xs border-b-2 border-blue-500"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" />
@@ -313,7 +275,7 @@ export default function InvestigationAIPage() {
                 })}
               </div>
 
-              {/* Tab content */}
+              {/* Tab Content */}
               <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
                   {activeTab === "timeline" && (
@@ -328,6 +290,103 @@ export default function InvestigationAIPage() {
                         highlightedTrackId={highlightedTrackId}
                         onHighlightTrack={setHighlightedTrackId}
                       />
+                    </motion.div>
+                  )}
+                  {activeTab === "summary" && (
+                    <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full p-4 overflow-y-auto space-y-4">
+                      <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-600" />
+                          <span className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                            LLM Investigation Summary
+                          </span>
+                        </div>
+                        {selectedMedia && (
+                          <button
+                            onClick={() => fetchSummary(selectedMedia.media_id, true)}
+                            disabled={isGeneratingSummary}
+                            className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold text-[11px] flex items-center gap-1 transition-colors"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isGeneratingSummary ? "animate-spin" : ""}`} />
+                            Refresh
+                          </button>
+                        )}
+                      </div>
+
+                      {summaryData ? (
+                        <div className="space-y-3 text-xs">
+                          <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-100 text-slate-800 font-medium leading-relaxed">
+                            {summaryData.summary_text}
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-white border border-slate-100 space-y-1.5 shadow-2xs">
+                            <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Observed Events</div>
+                            <ul className="space-y-1">
+                              {summaryData.observed_events.map((ev, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5 text-slate-700">
+                                  <span className="text-purple-600 font-bold">•</span>
+                                  <span>{ev}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-white border border-slate-100 space-y-1.5 shadow-2xs">
+                            <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Relevant Timestamps</div>
+                            <ul className="space-y-1 font-mono text-[11px]">
+                              {summaryData.relevant_timestamps.map((ts, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5 text-amber-700">
+                                  <span>⏱</span>
+                                  <span>{ts}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-white border border-slate-100 space-y-1.5 shadow-2xs">
+                            <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Detected Objects</div>
+                            <ul className="space-y-1 text-slate-700">
+                              {summaryData.detected_objects_summary.map((obj, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <span className="text-emerald-600 font-bold">🎯</span>
+                                  <span>{obj}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-white border border-slate-100 space-y-1.5 shadow-2xs">
+                            <div className="font-bold text-[10px] uppercase tracking-wider text-slate-400">Evidence References</div>
+                            <ul className="space-y-1 text-slate-700">
+                              {summaryData.evidence_references.map((ref, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <span className="text-blue-600 font-bold">🔗</span>
+                                  <span>{ref}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/60 space-y-1.5">
+                            <div className="flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider text-amber-700">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" />
+                              Uncertainty & Non-Accusation Policy
+                            </div>
+                            <ul className="space-y-1 text-[11px] text-amber-900/80">
+                              {summaryData.uncertainty_limitations.map((lim, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <span className="text-amber-600 font-bold">•</span>
+                                  <span>{lim}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-48 text-slate-400 text-xs font-medium">
+                          No LLM summary available.
+                        </div>
+                      )}
                     </motion.div>
                   )}
                   {activeTab === "details" && (
@@ -363,7 +422,7 @@ export default function InvestigationAIPage() {
               <div className="absolute top-8 right-8 w-32 h-32 bg-amber-500/8 blur-[40px] rounded-full pointer-events-none group-hover:bg-amber-500/15 transition-all duration-700" />
 
               <div className="flex items-center gap-3 mb-4 relative z-10">
-                <div className="p-2 rounded-xl bg-amber-50 border border-amber-100/50 shadow-sm">
+                <div className="p-2 rounded-xl bg-amber-50 border border-amber-100/50 shadow-xs">
                   <Zap className="w-4 h-4 text-amber-600" />
                 </div>
                 <div>
@@ -381,7 +440,7 @@ export default function InvestigationAIPage() {
                   activeJobs.map((job) => (
                     <div
                       key={job.job_id}
-                      className="flex flex-col gap-2 p-3 rounded-xl bg-white border border-slate-100 shadow-sm"
+                      className="flex flex-col gap-2 p-3 rounded-xl bg-white border border-slate-100 shadow-xs"
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-[12px] font-bold text-slate-800 truncate pr-3">
@@ -418,7 +477,7 @@ export default function InvestigationAIPage() {
               <div className="absolute bottom-0 left-0 w-40 h-40 bg-cyan-500/8 blur-[50px] rounded-full pointer-events-none group-hover:bg-cyan-500/15 transition-all duration-700" />
 
               <div className="flex items-center gap-3 mb-4 relative z-10">
-                <div className="p-2 rounded-xl bg-cyan-50 border border-cyan-100/50 shadow-sm">
+                <div className="p-2 rounded-xl bg-cyan-50 border border-cyan-100/50 shadow-xs">
                   <Crosshair className="w-4 h-4 text-cyan-600" />
                 </div>
                 <div>

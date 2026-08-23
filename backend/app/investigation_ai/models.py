@@ -55,6 +55,9 @@ class InvestigationMedia(Base):
     events: Mapped[List["InvestigationEvent"]] = relationship(
         "InvestigationEvent", back_populates="media", cascade="all, delete-orphan"
     )
+    summaries: Mapped[List["InvestigationSummary"]] = relationship(
+        "InvestigationSummary", back_populates="media", cascade="all, delete-orphan"
+    )
 
 
 class InvestigationAnalysisJob(Base):
@@ -143,3 +146,30 @@ class InvestigationEvent(Base):
 
     media: Mapped[InvestigationMedia] = relationship("InvestigationMedia", back_populates="events")
     job: Mapped[InvestigationAnalysisJob] = relationship("InvestigationAnalysisJob", back_populates="events")
+
+
+class InvestigationSummary(Base):
+    """Generated LLM Investigation Summary for evidence media."""
+
+    __tablename__ = "investigation_summaries"
+
+    summary_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    media_id: Mapped[int] = mapped_column(
+        ForeignKey("investigation_media.media_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("investigation_analysis_jobs.job_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+    observed_events: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    relevant_timestamps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    detected_objects_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    evidence_references: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    uncertainty_limitations: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    provider_used: Mapped[str] = mapped_column(String(50), default="llm", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    media: Mapped[InvestigationMedia] = relationship("InvestigationMedia", back_populates="summaries")
+

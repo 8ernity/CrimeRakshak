@@ -49,4 +49,5 @@ Thumbs.db
 
 # ── AI Model Weights & Storage Uploads ──
 *.pt
+storage/
 backend/storage/

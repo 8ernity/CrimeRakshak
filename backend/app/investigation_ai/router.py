@@ -11,11 +11,13 @@ from app.investigation_ai.schemas import (
     AnalysisJobResponse,
     DetectionListResponse,
     EventListResponse,
+    GenerateSummaryRequest,
     ImageAnalysisResponse,
     InvestigationMediaListResponse,
     InvestigationMediaResponse,
     LinkFIRRequest,
     ProcessMediaRequest,
+    SummaryResponse,
     VideoAnalysisResponse,
     VideoMetadata,
 )
@@ -350,5 +352,49 @@ def analyze_existing_video_media(
         total_detected_objects=analysis_res["total_detected_objects"],
         detections=analysis_res["detections"],
     )
+
+
+@router.get(
+    "/media/{media_id}/summary",
+    response_model=SummaryResponse,
+    summary="Get LLM Investigation Summary for evidence media item",
+)
+def get_investigation_summary(
+    media_id: int,
+    request: Request,
+    force_refresh: bool = Query(False),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> SummaryResponse:
+    return services.get_investigation_summary(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        force_refresh=force_refresh,
+        ip_address=get_client_ip(request),
+    )
+
+
+@router.post(
+    "/media/{media_id}/summary",
+    response_model=SummaryResponse,
+    summary="Generate or refresh LLM Investigation Summary for evidence media item",
+)
+def generate_investigation_summary(
+    media_id: int,
+    request: Request,
+    payload: Optional[GenerateSummaryRequest] = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> SummaryResponse:
+    force_ref = payload.force_refresh if payload is not None else True
+    return services.get_investigation_summary(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        force_refresh=force_ref,
+        ip_address=get_client_ip(request),
+    )
+
 
 

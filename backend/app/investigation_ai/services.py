@@ -541,3 +541,54 @@ def analyze_video_media(
         )
 
 
+def get_investigation_summary(
+    db: Session,
+    media_id: int,
+    user: User,
+    force_refresh: bool = False,
+    ip_address: Optional[str] = None,
+):
+    """Retrieve existing or generate fresh LLM Investigation Summary for media."""
+    import json
+    from app.investigation_ai.summary_generator import get_or_create_investigation_summary
+    from app.investigation_ai.schemas import SummaryResponse
+
+    media = get_media_by_id(db, media_id)
+    summary_orm = get_or_create_investigation_summary(
+        db=db, media=media, user=user, force_refresh=force_refresh
+    )
+
+    def parse_json_list(val: Optional[str]) -> List[str]:
+        if not val:
+            return []
+        try:
+            res = json.loads(val)
+            return res if isinstance(res, list) else [str(res)]
+        except Exception:
+            return [val]
+
+    audit.record(
+        db,
+        action="investigation.summary_generated",
+        user_id=user.user_id,
+        resource=f"media:{media.media_id}",
+        ip_address=ip_address,
+        detail={"summary_id": summary_orm.summary_id, "provider": summary_orm.provider_used},
+    )
+
+    return SummaryResponse(
+        summary_id=summary_orm.summary_id,
+        media_id=summary_orm.media_id,
+        job_id=summary_orm.job_id,
+        summary_text=summary_orm.summary_text,
+        observed_events=parse_json_list(summary_orm.observed_events),
+        relevant_timestamps=parse_json_list(summary_orm.relevant_timestamps),
+        detected_objects_summary=parse_json_list(summary_orm.detected_objects_summary),
+        evidence_references=parse_json_list(summary_orm.evidence_references),
+        uncertainty_limitations=parse_json_list(summary_orm.uncertainty_limitations),
+        provider_used=summary_orm.provider_used,
+        created_at=summary_orm.created_at,
+    )
+
+
+

@@ -68,6 +68,7 @@ const navSections: NavSection[] = [
   {
     title: "AI & Prediction",
     items: [
+      { href: "/investigation-ai", label: "AI Video Investigation", icon: Video },
       { href: "/ai-prediction", label: "AI Prediction", icon: Brain },
       { href: "/predictive-hotspots", label: "Predictive Hotspots", icon: Radar },
       { href: "/ai-assistant", label: "AI Copilot", icon: MessageSquare },
