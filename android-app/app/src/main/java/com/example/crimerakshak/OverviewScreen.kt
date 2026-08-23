@@ -20,6 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.crimerakshak.viewmodel.OverviewViewModel
 
 val PrimaryGreen = Color(0xFFa3d73c)
 val BackgroundDark = Color(0xFF11150b)
@@ -28,7 +32,12 @@ val TextLight = Color(0xFFe1e4d3)
 val TextMuted = Color(0xFF8c9383)
 
 @Composable
-fun OverviewScreen(modifier: Modifier = Modifier) {
+fun OverviewScreen(
+    modifier: Modifier = Modifier,
+    viewModel: OverviewViewModel = viewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -63,19 +72,25 @@ fun OverviewScreen(modifier: Modifier = Modifier) {
         Text("Real-time jurisdictional overview", color = TextMuted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 16.dp))
 
         // Chips Row
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(bottom = 16.dp)
-        ) {
-            val chips = listOf("CENTRAL DISTRICT" to true, "WEST PRECINCT" to false, "NORTH..." to false)
-            items(chips) { (text, isSelected) ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (isSelected) PrimaryGreen else SurfaceDark)
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(text, color = if (isSelected) BackgroundDark else TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        if (state.isLoading) {
+            CircularProgressIndicator(color = PrimaryGreen, modifier = Modifier.padding(bottom = 16.dp))
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                val chips = state.districts.take(4).mapIndexed { index, district -> 
+                    district.name to (index == 0) 
+                }
+                items(chips) { (text, isSelected) ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isSelected) PrimaryGreen else SurfaceDark)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(text.uppercase(), color = if (isSelected) BackgroundDark else TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -141,7 +156,7 @@ fun OverviewScreen(modifier: Modifier = Modifier) {
             ) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                     Text("TOTAL CRIMES", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("1,240", color = TextLight, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    Text(String.format("%,d", state.totalCrimes), color = TextLight, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.ArrowDownward, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(12.dp))
                         Text("-5% YOY", color = PrimaryGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -155,11 +170,13 @@ fun OverviewScreen(modifier: Modifier = Modifier) {
             ) {
                 Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                     Text("IPC CASES", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("820", color = TextLight, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+                    val totalIpc = state.districts.sumOf { it.ipc }
+                    Text(String.format("%,d", totalIpc), color = TextLight, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.PieChart, contentDescription = null, tint = TextMuted, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("66% SHARE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        val share = if (state.totalCrimes > 0) (totalIpc * 100 / state.totalCrimes) else 0
+                        Text("$share% SHARE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

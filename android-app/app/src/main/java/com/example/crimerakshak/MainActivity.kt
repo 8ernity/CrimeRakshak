@@ -10,11 +10,24 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.crimerakshak.theme.CrimeRakshakTheme
 
+import androidx.compose.runtime.LaunchedEffect
+import com.example.crimerakshak.api.RetrofitClient
+import kotlinx.coroutines.launch
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            LaunchedEffect(Unit) {
+                try {
+                    val response = RetrofitClient.apiService.login("admin", "admin123")
+                    RetrofitClient.authToken = response.accessToken
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            
             CrimeRakshakTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
