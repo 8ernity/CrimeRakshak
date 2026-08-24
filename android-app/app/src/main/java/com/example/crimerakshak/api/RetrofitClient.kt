@@ -7,8 +7,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // Standard alias for localhost when using Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:9000/"
+    // Use the Catalyst production backend URL
+    private const val BASE_URL = "https://crimerakshak-backend-50044347084.development.catalystappsail.in/"
 
     var authToken: String? = null
 

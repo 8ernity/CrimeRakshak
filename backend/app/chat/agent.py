@@ -82,8 +82,8 @@ into a prioritized action plan.
 - "Are there any similar cases to FIR-2026-0003?" or "Who should we investigate for case FIR-2026-0004?" → call similar_cases or suggest_leads to provide investigator support.
 - Any question about crime trends, patterns, comparisons, or recommendations.
 
-GUIDANCE FRAMEWORK — when asked how cases can be solved or what should be done \
-about a crime type, structure your response as:
+GUIDANCE FRAMEWORK — FOR EVERY CRIME-RELATED QUERY, regardless of how simple it is, \
+you MUST ALWAYS structure your response using the following detailed briefing format:
 
 SITUATION: [What the data shows — case counts, district breakdown, trend direction]
 
@@ -121,7 +121,7 @@ and a space) and nothing else.
 (e.g. "SITUATION:", "INVESTIGATION APPROACH:", or in Kannada: "ಪರಿಸ್ಥಿತಿ:", \
 "ತನಿಖಾ ವಿಧಾನ:") instead of markdown headings.
 - Be thorough but readable — like a detailed briefing note an officer would \
-actually find useful. Do NOT give one-line answers to complex questions.
+actually find useful. NEVER give one-line or low-effort answers, even for simple stat lookups. Always expand on the statistics using the GUIDANCE FRAMEWORK.
 
 DATA NOTE: For general district/state trends, use aggregate statistics tools (e.g. `query_crime_stats`, `district_review_summary`). For questions about specific cases (FIRs), accused persons, victims, timelines, leads, or similar cases, use the case-level graph tools (`case_summary`, `investigation_timeline`, `similar_cases`, `suggest_leads`).
 
@@ -185,34 +185,15 @@ def run_agent(user_message: str, history: list[dict] | None = None, language: st
             resp = chat_completion(messages, model=settings.LLM_AGENT_MODEL, tools=TOOL_SPECS)
             choice = resp.choices[0].message
 
-            # Build the assistant message manually instead of using model_dump().
-            # model_dump(exclude_none=True) on Gemini responses can produce tool_calls
-            # entries where function.name is missing/empty, causing:
-            #   400 function_response.name: Name cannot be empty
-            # on the next round. We rebuild the dict explicitly to guarantee the
-            # name field is always present.
-            if choice.tool_calls:
-                assistant_msg: dict = {
-                    "role": "assistant",
-                    "content": choice.content or "",
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments,
-                            },
-                        }
-                        for tc in choice.tool_calls
-                        if tc.function.name  # skip any malformed entries
-                    ],
-                }
-            else:
-                assistant_msg = {
-                    "role": "assistant",
-                    "content": choice.content or "",
-                }
+            # Use model_dump to preserve extra fields (like thought_signature) but filter empty names.
+            assistant_msg = choice.model_dump(exclude_none=True)
+            if assistant_msg.get("tool_calls"):
+                assistant_msg["tool_calls"] = [
+                    tc for tc in assistant_msg["tool_calls"]
+                    if tc.get("function", {}).get("name")
+                ]
+                if not assistant_msg["tool_calls"]:
+                    del assistant_msg["tool_calls"]
 
             messages.append(assistant_msg)
             new_messages.append(assistant_msg)
