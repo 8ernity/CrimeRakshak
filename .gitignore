@@ -61,3 +61,4 @@ backend/models/
 zip_backend.py
 backend_deploy.zip
 backend/static/*.apk
+backend/cloudflared.exe
