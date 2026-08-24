@@ -77,6 +77,8 @@ class DetectionResponse(BaseModel):
     confidence: float
     bbox: BoundingBox
     crop_image_path: Optional[str] = None
+    posture: Optional[str] = None
+    keypoints: Optional[List[dict]] = None
 
     class Config:
         from_attributes = True
@@ -102,6 +104,7 @@ class EventResponse(BaseModel):
     frame_end: int
     tracking_id: Optional[int] = None
     confidence: Optional[float] = None
+    posture: Optional[str] = None
     linked_person_id: Optional[str] = None
     linked_fir_id: Optional[str] = None
     created_at: datetime
@@ -132,6 +135,26 @@ class CaseMediaSummaryResponse(BaseModel):
 
 
 
+# ── Crime Decision Layer Response ──
+
+class CrimeDecisionResponse(BaseModel):
+    media_id: int
+    decision: str  # 'potential_crime', 'non_crime', 'uncertain'
+    status: str  # Alias for decision (backward compatibility requirement)
+    confidence: float
+    evidence_score: float
+    reasons: str  # Human-readable rationale explanation
+    evidence_events: List[str] = Field(default_factory=list)
+    timestamps: List[float] = Field(default_factory=list)
+    track_ids: List[int] = Field(default_factory=list)
+    safeguards_triggered: List[str] = Field(default_factory=list)
+    is_video: bool = True
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ── Image & Video Analysis Direct Responses ──
 
 class ImageAnalysisResponse(BaseModel):
@@ -141,6 +164,7 @@ class ImageAnalysisResponse(BaseModel):
     image_height: int
     total_detected_objects: int
     detections: List[DetectionResponse]
+    crime_decision: Optional[CrimeDecisionResponse] = None
 
 
 class VideoMetadata(BaseModel):
@@ -159,6 +183,7 @@ class VideoAnalysisResponse(BaseModel):
     video_metadata: VideoMetadata
     total_detected_objects: int
     detections: List[DetectionResponse]
+    crime_decision: Optional[CrimeDecisionResponse] = None
 
 
 # ── LLM Investigation Summary ──

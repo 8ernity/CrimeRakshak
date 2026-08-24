@@ -92,13 +92,45 @@ export default function InvestigationAIPage() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMedia) return;
-    const mId = selectedMedia.media_id;
-    getDetections(mId).then((res) => setDetections(res.detections));
-    getEvents(mId).then((res) => setEvents(res.events));
-    fetchSummary(mId);
+    // Immediately clear stale state from previous media
+    setDetections([]);
+    setEvents([]);
+    setSummaryData(null);
     setHighlightedTrackId(null);
-  }, [selectedMedia, fetchSummary]);
+
+    if (!selectedMedia) return;
+
+    let isCancelled = false;
+    const mId = selectedMedia.media_id;
+
+    getDetections(mId).then((res) => {
+      if (!isCancelled && res.media_id === mId) {
+        setDetections(res.detections || []);
+      }
+    });
+
+    getEvents(mId).then((res) => {
+      if (!isCancelled && res.media_id === mId) {
+        setEvents(res.events || []);
+      }
+    });
+
+    setIsGeneratingSummary(true);
+    getSummary(mId)
+      .then((data) => {
+        if (!isCancelled) setSummaryData(data);
+      })
+      .catch(() => {
+        if (!isCancelled) setSummaryData(null);
+      })
+      .finally(() => {
+        if (!isCancelled) setIsGeneratingSummary(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedMedia]);
 
   /* ── Jump To Timestamp Handler ── */
   const handleJumpToTimestamp = useCallback((sec: number) => {
@@ -116,6 +148,11 @@ export default function InvestigationAIPage() {
   /* ── Upload Complete Callback ── */
   const handleUploadComplete = useCallback(
     async (newMedia: InvestigationMedia) => {
+      setDetections([]);
+      setEvents([]);
+      setSummaryData(null);
+      setHighlightedTrackId(null);
+
       setMediaItems((prev) => [newMedia, ...prev]);
       setSelectedMedia(newMedia);
 
@@ -129,8 +166,8 @@ export default function InvestigationAIPage() {
         getDetections(newMedia.media_id),
         getEvents(newMedia.media_id),
       ]);
-      setDetections(detsRes.detections);
-      setEvents(evtsRes.events);
+      setDetections(detsRes.detections || []);
+      setEvents(evtsRes.events || []);
       fetchSummary(newMedia.media_id);
     },
     [fetchSummary]
@@ -488,9 +525,9 @@ export default function InvestigationAIPage() {
                     <span className="text-sm font-medium text-slate-400">No active jobs.</span>
                   </div>
                 ) : (
-                  activeJobs.map((job) => (
+                  activeJobs.map((job, idx) => (
                     <div
-                      key={job.job_id}
+                      key={`job-${job.job_id}-${idx}`}
                       className="flex flex-col gap-2 p-3 rounded-xl bg-white border border-slate-100 shadow-xs"
                     >
                       <div className="flex justify-between items-center">

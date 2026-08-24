@@ -49,8 +49,13 @@ Thumbs.db
 
 # "?"? AI Model Weights & Storage Uploads "?"?
 *.pt
+*.pth
+*.onnx
 storage/
 backend/storage/
+
+backend/data/
+backend/models/
 
 # "?"? Miscellaneous "?"?
 zip_backend.py

@@ -16,9 +16,10 @@ from app.investigation_ai.models import (
     InvestigationAnalysisJob,
     DetectionResult,
     InvestigationEvent,
+    InvestigationCrimeDecision,
 )
 from app.core import security
-from app.investigation_ai.schemas import BoundingBox, DetectionResponse, InvestigationMediaResponse
+from app.investigation_ai.schemas import BoundingBox, DetectionResponse, InvestigationMediaResponse, CrimeDecisionResponse
 
 
 def to_media_response(media: InvestigationMedia, user: Optional[User] = None) -> InvestigationMediaResponse:
@@ -388,7 +389,152 @@ def extract_events_for_media(
         ip_address=ip_address,
         detail={"extracted_count": len(event_models)},
     )
+
+    # Automatically run CrimeDecisionEngine after event extraction
+    try:
+        evaluate_and_save_crime_decision(db=db, media_id=media.media_id, user=user, job_id=target_job_id)
+    except Exception as dec_err:
+        logger.warning(f"Automatic crime decision evaluation failed for media {media.media_id}: {dec_err}")
+
     return event_models
+
+
+def evaluate_and_save_crime_decision(
+    db: Session,
+    media_id: int,
+    user: User,
+    job_id: Optional[int] = None,
+) -> InvestigationCrimeDecision:
+    """Run CrimeDecisionEngine over media's detections & events and persist decision."""
+    import json
+    from app.investigation_ai.processors.crime_decision_engine import CrimeDecisionEngine
+
+    media = get_media_by_id(db, media_id)
+    detections = get_media_detections(db, media_id)
+    events = get_media_events(db, media_id)
+
+    dets_dict = []
+    for d in detections:
+        if hasattr(d, "bbox"):
+            b = d.bbox
+            b_dict = {
+                "xmin": b.xmin if hasattr(b, "xmin") else b.get("xmin", 0.0),
+                "ymin": b.ymin if hasattr(b, "ymin") else b.get("ymin", 0.0),
+                "xmax": b.xmax if hasattr(b, "xmax") else b.get("xmax", 0.0),
+                "ymax": b.ymax if hasattr(b, "ymax") else b.get("ymax", 0.0),
+            }
+            dets_dict.append({
+                "frame_number": getattr(d, "frame_number", 0),
+                "timestamp_seconds": getattr(d, "timestamp_seconds", 0.0),
+                "object_class": getattr(d, "object_class", ""),
+                "tracking_id": getattr(d, "tracking_id", None),
+                "confidence": getattr(d, "confidence", 0.0),
+                "bbox": b_dict,
+            })
+        else:
+            dets_dict.append({
+                "frame_number": d.get("frame_number", 0),
+                "timestamp_seconds": d.get("timestamp_seconds", 0.0),
+                "object_class": d.get("object_class", ""),
+                "tracking_id": d.get("tracking_id"),
+                "confidence": d.get("confidence", 0.0),
+                "bbox": d.get("bbox", {}),
+            })
+
+    evts_dict = []
+    for e in events:
+        if hasattr(e, "event_type"):
+            evts_dict.append({
+                "event_type": getattr(e, "event_type", ""),
+                "description": getattr(e, "description", ""),
+                "timestamp_seconds": getattr(e, "start_timestamp_seconds", getattr(e, "timestamp_seconds", 0.0)),
+                "frame_number": getattr(e, "frame_start", getattr(e, "frame_number", 0)),
+                "tracking_id": getattr(e, "tracking_id", None),
+                "confidence": getattr(e, "confidence", 0.0),
+            })
+        else:
+            evts_dict.append({
+                "event_type": e.get("event_type", ""),
+                "description": e.get("description", ""),
+                "timestamp_seconds": e.get("start_timestamp_seconds", e.get("timestamp_seconds", 0.0)),
+                "frame_number": e.get("frame_start", e.get("frame_number", 0)),
+                "tracking_id": e.get("tracking_id"),
+                "confidence": e.get("confidence", 0.0),
+            })
+
+    engine = CrimeDecisionEngine()
+    is_video = (media.file_type == "video")
+    decision_res = engine.evaluate_decision(
+        detections=dets_dict,
+        events=evts_dict,
+        is_video=is_video,
+        media_id=media.media_id,
+    )
+
+    # Delete previous decision if existing
+    existing = db.execute(
+        select(InvestigationCrimeDecision).where(InvestigationCrimeDecision.media_id == media_id)
+    ).scalars().first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+
+    decision_rec = InvestigationCrimeDecision(
+        media_id=media_id,
+        job_id=job_id,
+        decision=decision_res["decision"],
+        confidence=decision_res["confidence"],
+        evidence_score=decision_res["evidence_score"],
+        reasons=decision_res["rationale"],
+        evidence_events=json.dumps(decision_res["primary_triggers"]),
+        timestamps=json.dumps(decision_res["timestamps"]),
+        track_ids=json.dumps(decision_res["track_ids"]),
+        safeguards_triggered=json.dumps(decision_res["safeguards_triggered"]),
+        is_video=is_video,
+    )
+    db.add(decision_rec)
+    db.commit()
+    db.refresh(decision_rec)
+    return decision_rec
+
+
+def get_crime_decision(
+    db: Session,
+    media_id: int,
+    user: User,
+) -> CrimeDecisionResponse:
+    """Retrieve existing Crime Decision for media, or evaluate if not present."""
+    import json
+    media = get_media_by_id(db, media_id)
+    decision_orm = db.execute(
+        select(InvestigationCrimeDecision).where(InvestigationCrimeDecision.media_id == media_id)
+    ).scalars().first()
+
+    if not decision_orm:
+        decision_orm = evaluate_and_save_crime_decision(db, media_id, user)
+
+    def parse_json(val: Optional[str]):
+        if not val:
+            return []
+        try:
+            return json.loads(val)
+        except Exception:
+            return []
+
+    return CrimeDecisionResponse(
+        media_id=decision_orm.media_id,
+        decision=decision_orm.decision,
+        status=decision_orm.decision,  # Alias
+        confidence=decision_orm.confidence,
+        evidence_score=decision_orm.evidence_score,
+        reasons=decision_orm.reasons,
+        evidence_events=parse_json(decision_orm.evidence_events),
+        timestamps=parse_json(decision_orm.timestamps),
+        track_ids=parse_json(decision_orm.track_ids),
+        safeguards_triggered=parse_json(decision_orm.safeguards_triggered),
+        is_video=decision_orm.is_video,
+        created_at=decision_orm.created_at,
+    )
 
 
 def link_media_to_fir(
@@ -518,7 +664,19 @@ def analyze_image_media(
             },
         )
 
+        # Trigger automatic event extraction & crime decision evaluation
+        try:
+            extract_events_for_media(db=db, media_id=media.media_id, user=user, job_id=job.job_id, ip_address=ip_address)
+        except Exception as ev_err:
+            logger.warning(f"Automatic event extraction failed for media {media.media_id}: {ev_err}")
+
         formatted_detections = get_media_detections(db, media.media_id)
+        decision_resp = None
+        try:
+            decision_resp = get_crime_decision(db=db, media_id=media.media_id, user=user)
+        except Exception as dec_err:
+            logger.warning(f"Failed to fetch crime decision for image media {media.media_id}: {dec_err}")
+
         return {
             "media": media,
             "job": job,
@@ -526,6 +684,7 @@ def analyze_image_media(
             "image_height": results.get("image_height", 0),
             "total_detected_objects": results.get("total_objects", 0),
             "detections": formatted_detections,
+            "crime_decision": decision_resp,
         }
 
     except Exception as e:
@@ -635,6 +794,12 @@ def analyze_video_media(
             logger.warning(f"Automatic event extraction failed for media {media.media_id}: {ev_err}")
 
         formatted_detections = get_media_detections(db, media.media_id)
+        decision_resp = None
+        try:
+            decision_resp = get_crime_decision(db=db, media_id=media.media_id, user=user)
+        except Exception as dec_err:
+            logger.warning(f"Failed to fetch crime decision for video media {media.media_id}: {dec_err}")
+
         video_meta = {
             "fps": results.get("fps", 0.0),
             "total_frames": results.get("total_frames", 0),
@@ -651,6 +816,7 @@ def analyze_video_media(
             "video_metadata": video_meta,
             "total_detected_objects": results.get("total_detected_objects", 0),
             "detections": formatted_detections,
+            "crime_decision": decision_resp,
         }
 
     except Exception as e:

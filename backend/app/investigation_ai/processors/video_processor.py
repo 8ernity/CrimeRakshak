@@ -11,7 +11,82 @@ from app.core.config import settings
 from app.investigation_ai.processors.base import BaseMediaProcessor
 from app.investigation_ai.processors.detector import YOLODetector
 
+import math
+from collections import defaultdict
+
 logger = logging.getLogger("investigation.video_processor")
+
+
+def _smooth_track_continuity(
+    detections: List[Dict[str, Any]], max_gap_frames: int = 6, max_dist_px: float = 110.0
+) -> List[Dict[str, Any]]:
+    """Remap fragmented tracking IDs across abrupt posture transitions to preserve identity persistence."""
+    if not detections:
+        return detections
+
+    tracks: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+    for d in detections:
+        tid = d.get("tracking_id")
+        if tid is not None:
+            tracks[tid].append(d)
+
+    if not tracks:
+        return detections
+
+    track_meta = {}
+    for tid, dets in tracks.items():
+        sorted_dets = sorted(dets, key=lambda d: d.get("frame_number", 0))
+        first_d, last_d = sorted_dets[0], sorted_dets[-1]
+
+        c_first = (
+            (first_d["bbox"]["xmin"] + first_d["bbox"]["xmax"]) / 2.0,
+            (first_d["bbox"]["ymin"] + first_d["bbox"]["ymax"]) / 2.0,
+        )
+        c_last = (
+            (last_d["bbox"]["xmin"] + last_d["bbox"]["xmax"]) / 2.0,
+            (last_d["bbox"]["ymin"] + last_d["bbox"]["ymax"]) / 2.0,
+        )
+
+        track_meta[tid] = {
+            "first_frame": first_d.get("frame_number", 0),
+            "last_frame": last_d.get("frame_number", 0),
+            "first_center": c_first,
+            "last_center": c_last,
+            "object_class": first_d.get("object_class"),
+        }
+
+    sorted_tids = sorted(track_meta.keys(), key=lambda t: track_meta[t]["first_frame"])
+    id_remap: Dict[int, int] = {}
+
+    for i in range(len(sorted_tids)):
+        tidB = sorted_tids[i]
+        metaB = track_meta[tidB]
+
+        for j in range(i):
+            tidA = sorted_tids[j]
+            rootA = id_remap.get(tidA, tidA)
+            metaA = track_meta[rootA]
+
+            frame_gap = metaB["first_frame"] - metaA["last_frame"]
+            if 0 <= frame_gap <= max_gap_frames and metaA["object_class"] == metaB["object_class"]:
+                dist = math.hypot(
+                    metaB["first_center"][0] - metaA["last_center"][0],
+                    metaB["first_center"][1] - metaA["last_center"][1],
+                )
+                if dist <= max_dist_px:
+                    id_remap[tidB] = rootA
+                    metaA["last_frame"] = max(metaA["last_frame"], metaB["last_frame"])
+                    metaA["last_center"] = metaB["last_center"]
+                    break
+
+    if id_remap:
+        logger.info(f"Remapped {len(id_remap)} fragmented tracking IDs for identity persistence: {id_remap}")
+        for d in detections:
+            old_tid = d.get("tracking_id")
+            if old_tid in id_remap:
+                d["tracking_id"] = id_remap[old_tid]
+
+    return detections
 
 
 class VideoProcessor(BaseMediaProcessor):
@@ -40,7 +115,14 @@ class VideoProcessor(BaseMediaProcessor):
 
         # Reset tracker state before starting video stream
         self.detector.reset_tracker()
-        tracker_cfg = "botsort.yaml" if tracker_type.lower() == "botsort" else "bytetrack.yaml"
+
+        custom_bytetrack_yaml = os.path.join(os.path.dirname(__file__), "crimerakshak_bytetrack.yaml")
+        if tracker_type.lower() == "botsort":
+            tracker_cfg = "botsort.yaml"
+        elif os.path.exists(custom_bytetrack_yaml):
+            tracker_cfg = custom_bytetrack_yaml
+        else:
+            tracker_cfg = "bytetrack.yaml"
 
         try:
             fps = cap.get(cv2.CAP_PROP_FPS)
@@ -84,6 +166,9 @@ class VideoProcessor(BaseMediaProcessor):
                         progress_callback(current_frame_idx, total_frames, min(100.0, pct))
 
                 current_frame_idx += 1
+
+            # Apply track continuity smoother across posture transitions
+            frame_detections = _smooth_track_continuity(frame_detections)
 
             logger.info(
                 f"Completed video processing for '{video_path}': {len(frame_detections)} objects detected across {sampled_frames_count} sampled frames."
