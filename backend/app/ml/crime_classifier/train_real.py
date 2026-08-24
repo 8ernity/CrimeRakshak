@@ -31,6 +31,56 @@ MODEL_SAVE_DIR = os.path.join("backend", "models")
 REAL_MODEL_PATH = os.path.join(MODEL_SAVE_DIR, "resnet18_crime_real.pth")
 
 
+def _is_synthetic_dataset(max_samples: int = 10) -> bool:
+    """Detect whether the dataset contains synthetic geometric-shape images.
+
+    Samples up to max_samples images from the training set and checks:
+    - Extremely low unique color count (< 50 unique colors in 224x224 = synthetic)
+    - Very low pixel variance (solid backgrounds with simple shapes)
+
+    Returns True if the data appears synthetic.
+    """
+    from PIL import Image
+    import numpy as np
+
+    train_dir = os.path.join(FRAMES_DIR, "train")
+    if not os.path.isdir(train_dir):
+        return False  # No data at all; other guards handle this
+
+    sample_paths = []
+    for cls_name in os.listdir(train_dir):
+        cls_dir = os.path.join(train_dir, cls_name)
+        if not os.path.isdir(cls_dir):
+            continue
+        files = [f for f in os.listdir(cls_dir) if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+        sample_paths.extend([os.path.join(cls_dir, f) for f in files[:max_samples]])
+
+    if not sample_paths:
+        return False
+
+    synthetic_count = 0
+    checked = 0
+    for fpath in sample_paths[:max_samples]:
+        try:
+            img = Image.open(fpath).convert("RGB")
+            arr = np.array(img)
+            # Count unique RGB tuples
+            pixels = arr.reshape(-1, 3)
+            unique_colors = len(set(map(tuple, pixels.tolist()[:2000])))
+            # Very low unique color count indicates solid-color geometric shapes
+            if unique_colors < 50:
+                synthetic_count += 1
+            checked += 1
+        except Exception:
+            continue
+
+    if checked == 0:
+        return False
+
+    # If >60% of sampled images look synthetic, flag the dataset
+    return (synthetic_count / checked) > 0.6
+
+
 def compute_class_weights(dataset: RealCrimeDataset) -> torch.Tensor:
     """Compute inverse-frequency class weights: w_c = N / (K * N_c)."""
     counts = [0] * len(CLASSES)
@@ -81,6 +131,13 @@ def train_real_model(
 
     if not report["passed"]:
         print("ERROR: Dataset validation failed. Fix issues before training.", flush=True)
+        return 0.0
+
+    # Guard: reject synthetic geometric-shape data
+    if _is_synthetic_dataset():
+        print("ERROR: Detected SYNTHETIC dataset (geometric shapes on solid backgrounds).", flush=True)
+        print("  train_real.py requires REAL surveillance frames.", flush=True)
+        print("  Place real videos in backend/data/real_crime_dataset/raw/ and run ingestion.", flush=True)
         return 0.0
 
     # 2. Create datasets and loaders
