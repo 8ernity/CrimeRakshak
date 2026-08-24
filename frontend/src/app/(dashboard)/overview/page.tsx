@@ -80,70 +80,65 @@ export default function OverviewPage() {
     {
       title: "Total Crimes",
       value: dynamicStats.totalCrimes.toLocaleString("en-IN"),
-      icon: AlertTriangle,
-      trend: `${dynamicStats.yoyChange}%`,
+      icon: "crisis_alert",
+      trend: `${dynamicStats.yoyChange}% vs 2024`,
       trendLabel: "vs 2024",
+      positive: true,
     },
     {
       title: "IPC Cases",
       value: dynamicStats.ipcCount.toLocaleString("en-IN"),
-      subValue: `+ SLL: ${(dynamicStats.totalCrimes - dynamicStats.ipcCount).toLocaleString("en-IN")}`,
-      icon: Scale,
-      trend: `${dynamicStats.ipcShare}%`,
+      icon: "gavel",
+      trend: `${dynamicStats.ipcShare}% of total`,
       trendLabel: "of total",
       positive: true,
     },
     {
       title: "Resolution Rate",
       value: `${dynamicStats.resolutionRate}%`,
-      icon: ShieldCheck,
-      trend: "+2.1%",
+      icon: "verified_user",
+      trend: "+2.1% statutory clearance",
       trendLabel: "statutory clearance",
       positive: true,
     },
     {
       title: "Monitored Jurisdictions",
       value: String(dynamicStats.districtCount),
-      icon: Building2,
-      trend: selectedRange,
+      icon: "location_city",
+      trend: `${selectedRange} active sector`,
       trendLabel: "active sector",
       positive: true,
     },
   ];
 
   return (
-    <div className="px-4 md:px-6 lg:px-8 pb-8 pt-2 md:pt-4 space-y-6 max-w-[1600px] mx-auto">
+    <div className="flex-1 p-6 space-y-6 overflow-y-auto w-full">
       {/* Header Section */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
-        <motion.div 
-          initial={{ y: -20, opacity: 0 }} 
-          animate={{ y: 0, opacity: 1 }} 
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-widest uppercase bg-brand-purple/10 text-brand-purple border border-brand-purple/20">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-4">
+        <div>
+          <div className="flex items-center space-x-2 mb-1">
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest text-primary bg-primary/10 border border-primary/20 uppercase">
               {t("MACRO SURVEILLANCE")}
             </span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-heading font-bold text-brand-purple">
+          <h1 className="text-3xl font-bold text-on-background">
             {t("Welcome")}, {userName}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
+          <p className="text-sm text-on-background/60">
             {t("Executive Pattern Snapshot")}
           </p>
-        </motion.div>
+        </div>
 
         {/* Range Filter Selector */}
-        <div className="flex flex-nowrap overflow-x-auto items-center gap-1.5 bg-muted/20 p-1.5 rounded-xl border border-border/60 hide-scrollbar max-w-full">
-          <Filter className="w-4 h-4 ml-2 text-muted-foreground hidden sm:block shrink-0" />
+        <div className="flex items-center space-x-2 bg-surface/50 p-1 rounded-lg border border-white/5 overflow-x-auto">
           {RANGES.map((range) => (
             <button
               key={range}
               onClick={() => setSelectedRange(range)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                 selectedRange === range
-                  ? "bg-brand-purple text-white shadow-md shadow-brand-purple/25"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "bg-primary text-surface"
+                  : "text-on-background/70 hover:text-on-background hover:bg-white/5"
               }`}
             >
               {t(range)}
@@ -153,153 +148,119 @@ export default function OverviewPage() {
       </div>
 
       {/* ─── Early Warning Banner & Governance SLA Row ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Early Warning & Predictive Threat Banner */}
-        <Card className="glass-card h-full border-l-4 border-l-brand-red bg-gradient-to-r from-brand-red/10 via-background to-background">
-          <CardContent className="p-4 h-full flex flex-col justify-center sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="p-2.5 bg-brand-red/15 rounded-xl shrink-0 mt-0.5">
-                <Siren className="h-5 w-5 text-brand-red animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-brand-red">
-                    {t("AI PREDICTIVE ALERT")}
-                  </span>
-                  <span className="text-[10px] bg-brand-red/20 text-brand-red px-2 py-0.5 rounded-full font-mono font-bold">
-                    ACTIVE
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-foreground mt-1">
-                  {t("Projected +14.2% Property Theft anomaly.")}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t("Action: Pre-deploy units & step up screening.")}
-                </p>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        {/* Early Warning Banner */}
+        <div className="bg-surface/40 border border-[#ffb4ab]/20 p-4 rounded-xl flex items-center justify-between relative overflow-hidden group">
+          <div className="absolute inset-0 bg-[#ffb4ab]/5 group-hover:bg-[#ffb4ab]/10 transition-colors"></div>
+          <div className="flex items-start space-x-4 relative z-10">
+            <div className="p-2 bg-[#ffb4ab]/10 rounded-lg">
+              <span className="material-symbols-outlined text-[#ffb4ab] animate-pulse">
+                warning
+              </span>
             </div>
-            <a
-              href="/alerts"
-              className="px-3.5 py-2 rounded-lg bg-brand-red/15 hover:bg-brand-red/25 text-brand-red text-xs font-bold whitespace-nowrap transition-all border border-brand-red/30 shrink-0"
-            >
-              {t("Triage Alerts →")}
-            </a>
-          </CardContent>
-        </Card>
+            <div>
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-xs font-bold text-[#ffb4ab] uppercase tracking-wider">
+                  AI PREDICTIVE ALERT
+                </span>
+                <span className="px-2 py-0.5 rounded bg-[#ffb4ab]/20 text-[#ffb4ab] text-[10px] font-mono font-bold">
+                  ACTIVE
+                </span>
+              </div>
+              <p className="text-sm font-medium text-on-background">
+                Projected +14.2% Property Theft anomaly.
+              </p>
+              <p className="text-xs text-on-background/60">
+                Action: Pre-deploy units &amp; step up screening.
+              </p>
+            </div>
+          </div>
+          <button className="relative z-10 px-4 py-2 bg-[#ffb4ab]/10 text-[#ffb4ab] text-xs font-bold rounded-lg border border-[#ffb4ab]/20 hover:bg-[#ffb4ab]/20 transition-colors whitespace-nowrap">
+            Triage Alerts →
+          </button>
+        </div>
 
-        {/* Digital Policing & Governance SLA Card */}
-        <Card className="glass-card h-full border-l-4 border-l-brand-teal bg-gradient-to-r from-brand-teal/10 via-background to-background">
-          <CardContent className="p-4 h-full flex flex-col justify-center sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="p-2.5 bg-brand-teal/15 rounded-xl shrink-0 mt-0.5">
-                <FileCheck className="h-5 w-5 text-brand-teal" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-brand-teal">
-                    {t("DIGITAL POLICING SLA")}
-                  </span>
-                  <span className="text-[10px] bg-brand-teal/20 text-brand-teal px-2 py-0.5 rounded-full font-mono font-bold flex items-center gap-1">
-                    <CheckCircle2 className="h-2.5 w-2.5" /> VERIFIED
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-foreground mt-1">
-                  {t("eSign FIR Compliance: 98.4% | Service Disposal: 96.8%.")}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t("All records backed by immutable audit logs.")}
-                </p>
-              </div>
+        {/* Governance SLA */}
+        <div className="bg-surface/40 border border-primary/20 p-4 rounded-xl flex items-center justify-between relative overflow-hidden group">
+          <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors"></div>
+          <div className="flex items-start space-x-4 relative z-10">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <span className="material-symbols-outlined text-primary">
+                policy
+              </span>
             </div>
-            <a
-              href="/governance"
-              className="px-3.5 py-2 rounded-lg bg-brand-teal/15 hover:bg-brand-teal/25 text-brand-teal text-xs font-bold whitespace-nowrap transition-all border border-brand-teal/30 shrink-0"
-            >
-              {t("Audit Log →")}
-            </a>
-          </CardContent>
-        </Card>
+            <div>
+              <div className="flex items-center space-x-2 mb-1">
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                  DIGITAL POLICING SLA
+                </span>
+                <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px] font-mono font-bold flex items-center space-x-1">
+                  <span className="material-symbols-outlined text-[12px]">
+                    check_circle
+                  </span>
+                  <span>VERIFIED</span>
+                </span>
+              </div>
+              <p className="text-sm font-medium text-on-background">
+                eSign FIR Compliance: 98.4% | Service Disposal: 96.8%.
+              </p>
+              <p className="text-xs text-on-background/60">
+                All records backed by immutable audit logs.
+              </p>
+            </div>
+          </div>
+          <button className="relative z-10 px-4 py-2 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors whitespace-nowrap">
+            Audit Log →
+          </button>
+        </div>
       </div>
 
       {/* KPI Grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((kpi, i) => {
-          const Icon = kpi.icon;
-          return (
-            <motion.div
-              key={kpi.title}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-            >
-              <Card className="glass-card h-full relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-purple/10 hover:border-brand-purple/30">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 pointer-events-none" />
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 relative">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {t(kpi.title)}
-                  </CardTitle>
-                  <div className="h-9 w-9 rounded-lg bg-brand-purple/10 flex items-center justify-center">
-                    <Icon className="h-4 w-4 text-brand-purple" />
-                  </div>
-                </CardHeader>
-                <CardContent className="relative">
-                  <div className="text-2xl font-mono font-bold gradient-text">
-                    {kpi.value}
-                  </div>
-                  {(kpi as any).subValue && (
-                    <div className="text-xs font-mono font-bold text-emerald-500 mt-0.5">
-                      {(kpi as any).subValue}
-                    </div>
-                  )}
-                  <p
-                    className={`text-xs mt-1 flex items-center gap-1 ${
-                      kpi.positive !== false && !kpi.trend.startsWith("-")
-                        ? "text-emerald-500"
-                        : "text-rose-500"
-                    }`}
-                  >
-                    {kpi.trend.startsWith("-") ? (
-                      <TrendingDown className="h-3 w-3" />
-                    ) : (
-                      <Activity className="h-3 w-3" />
-                    )}
-                    {kpi.trend} {t(kpi.trendLabel)}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {kpis.map((kpi, i) => (
+          <div key={i} className="bg-surface/60 border border-white/5 p-5 rounded-xl hover:bg-surface/80 hover:border-primary/30 transition-all group">
+            <div className="flex items-start justify-between mb-4">
+              <span className="text-sm font-medium text-on-background/60">
+                {t(kpi.title)}
+              </span>
+              <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                <span className="material-symbols-outlined text-primary text-sm">
+                  {kpi.icon}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-on-background mb-1">
+                {kpi.value}
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="material-symbols-outlined text-[14px] text-primary">
+                  trending_down
+                </span>
+                <span className="text-xs font-medium text-primary">
+                  {kpi.trend}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Point 3: Charts Row 1 (District Volume Comparison & Crime Category Share) */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        <motion.div
-          className="lg:col-span-3"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.35 }}
-        >
+      {/* Charts Row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
           <DistrictVolumeChart />
-        </motion.div>
-        <motion.div
-          className="lg:col-span-2"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-        >
+        </div>
+        <div className="lg:col-span-1">
           <CrimeCategoryDonut />
-        </motion.div>
+        </div>
       </div>
 
-      {/* Point 3: Charts Row 2 (Monthly Temporal Trend Analysis) */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.45 }}
-      >
+      {/* Charts Row 2 */}
+      <div className="w-full">
         <MonthlyTrendChart />
-      </motion.div>
+      </div>
     </div>
   );
 }
+

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { getTopDistricts } from "@/lib/derive";
 import { useLanguage } from "@/components/LanguageContext";
 import {
@@ -26,7 +24,6 @@ export function DistrictVolumeChart() {
   const top10 = getTopDistricts(10, mode);
 
   const data = top10.map((d) => {
-    // Exact official statutory figures or accurate mathematical averages
     const divisor = time === "monthly" ? 12 : time === "daily" ? 365 : 1;
     const ipcVal = time === "daily" ? Math.round((d.ipc / divisor) * 10) / 10 : Math.round(d.ipc / divisor);
     const sllVal = time === "daily" ? Math.round((d.sll / divisor) * 10) / 10 : Math.round(d.sll / divisor);
@@ -42,145 +39,150 @@ export function DistrictVolumeChart() {
   });
 
   return (
-    <Card className="glass-card relative overflow-hidden transition-all duration-300 shadow-md hover:shadow-xl hover:border-brand-purple/20">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3">
+    <div className="bg-surface/40 border border-white/5 p-5 rounded-xl h-full flex flex-col group hover:bg-surface/60 transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <CardTitle className="font-heading text-base text-foreground flex items-center gap-2">
-            <span>{t("Top 10 Districts — Crime Volume")}</span>
-            <span className="text-xs font-semibold text-brand-purple bg-brand-purple/10 px-2.5 py-0.5 rounded-full border border-brand-purple/20">
-              {time === "annual" ? t("2025 Annual Official") : time === "monthly" ? t("2025 Monthly Average") : t("2025 Daily Average")}
-            </span>
-          </CardTitle>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("Official KSP statutory jurisdiction volume (Real reported IPC & SLL cases)")}
+          <h3 className="text-lg font-bold text-on-background">
+            {t("District Volume Comparison")}
+          </h3>
+          <p className="text-xs text-on-background/60 mt-1">
+            {time === "annual" ? t("2025 Annual Official") : time === "monthly" ? t("2025 Monthly Average") : t("2025 Daily Average")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/50">
+          <div className="flex gap-1 bg-surface/50 p-1 rounded-lg border border-white/5">
             {(
               [
-                { id: "annual", label: "Annual (Official)" },
-                { id: "monthly", label: "Monthly Avg" },
-                { id: "daily", label: "Daily Avg" },
+                { id: "annual", label: "Annual" },
+                { id: "monthly", label: "Monthly" },
+                { id: "daily", label: "Daily" },
               ] as const
             ).map((item) => (
-              <Button
+              <button
                 key={item.id}
-                size="sm"
-                variant={time === item.id ? "secondary" : "ghost"}
-                className="text-xs h-7 px-2.5 rounded-md font-semibold"
                 onClick={() => setTime(item.id)}
+                className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
+                  time === item.id
+                    ? "bg-primary/20 text-primary"
+                    : "text-on-background/60 hover:text-on-background hover:bg-white/5"
+                }`}
               >
                 {t(item.label)}
-              </Button>
+              </button>
             ))}
           </div>
-          <div className="flex gap-1 bg-muted/40 p-1 rounded-lg border border-border/50">
+          <div className="flex gap-1 bg-surface/50 p-1 rounded-lg border border-white/5">
             {(["total", "ipc", "sll"] as const).map((m) => (
-              <Button
+              <button
                 key={m}
-                size="sm"
-                variant={mode === m ? "default" : "ghost"}
-                className="text-xs h-7 px-3 rounded-md shadow-none font-bold"
                 onClick={() => setMode(m)}
+                className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
+                  mode === m
+                    ? "bg-primary text-surface"
+                    : "text-on-background/60 hover:text-on-background hover:bg-white/5"
+                }`}
               >
                 {t(m.toUpperCase())}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[320px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ left: 15, top: 10, bottom: 20 }}>
-              <defs>
-                <linearGradient id="colorIpc" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorSll" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                angle={-35}
-                textAnchor="end"
-                height={70}
-              />
-              <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-              <Tooltip
-                contentStyle={{
-                  background: "rgba(255, 255, 255, 0.85)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  border: "1px solid rgba(255, 255, 255, 0.7)",
-                  borderRadius: "16px",
-                  boxShadow: "0 8px 30px rgba(80, 140, 255, 0.12)",
-                  color: "#0f172a",
-                }}
-                itemStyle={{ color: "#0f172a", fontWeight: 600 }}
-                formatter={(value: any) => value?.toLocaleString("en-IN")}
-              />
-              {mode === "total" ? (
-                <>
-                  <Area
-                    type="natural"
-                    name={t("IPC Cases")}
-                    dataKey="IPC"
-                    stroke="var(--chart-1)"
-                    fill="url(#colorIpc)"
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                    animationDuration={1500}
-                  />
-                  <Area
-                    type="natural"
-                    name={t("SLL Cases")}
-                    dataKey="SLL"
-                    stroke="#10b981"
-                    fill="url(#colorSll)"
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                    animationDuration={1500}
-                  />
-                  <Legend />
-                </>
-              ) : mode === "ipc" ? (
+      </div>
+      
+      <div className="flex-1 w-full min-h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ left: -10, top: 10, bottom: 20 }}>
+            <defs>
+              <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#a3d73c" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#a3d73c" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorSecondary" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#e1e4d3" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#e1e4d3" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: "#8c9383" }}
+              angle={-35}
+              textAnchor="end"
+              height={70}
+              axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+              tickLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: "#8c9383" }} 
+              axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+              tickLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "rgba(17, 21, 11, 0.9)", // surface color
+                border: "1px solid rgba(163, 215, 60, 0.2)", // primary/20
+                borderRadius: "8px",
+                color: "#e1e4d3",
+                fontSize: "12px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
+              }}
+              itemStyle={{ color: "#e1e4d3", fontWeight: 600 }}
+              formatter={(value: any) => value?.toLocaleString("en-IN")}
+            />
+            {mode === "total" ? (
+              <>
                 <Area
-                  type="natural"
+                  type="monotone"
                   name={t("IPC Cases")}
                   dataKey="IPC"
-                  stroke="var(--chart-1)"
-                  fill="url(#colorIpc)"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  stroke="#a3d73c"
+                  fill="url(#colorPrimary)"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "#11150b", stroke: "#a3d73c", strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: "#a3d73c", stroke: "#11150b" }}
                   animationDuration={1500}
                 />
-              ) : (
                 <Area
-                  type="natural"
+                  type="monotone"
                   name={t("SLL Cases")}
                   dataKey="SLL"
-                  stroke="#10b981"
-                  fill="url(#colorSll)"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  stroke="#e1e4d3"
+                  fill="url(#colorSecondary)"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "#11150b", stroke: "#e1e4d3", strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: "#e1e4d3", stroke: "#11150b" }}
                   animationDuration={1500}
                 />
-              )}
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+                <Legend wrapperStyle={{ fontSize: 12, color: "#8c9383" }} />
+              </>
+            ) : mode === "ipc" ? (
+              <Area
+                type="monotone"
+                name={t("IPC Cases")}
+                dataKey="IPC"
+                stroke="#a3d73c"
+                fill="url(#colorPrimary)"
+                strokeWidth={2}
+                dot={{ r: 4, fill: "#11150b", stroke: "#a3d73c", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#a3d73c", stroke: "#11150b" }}
+                animationDuration={1500}
+              />
+            ) : (
+              <Area
+                type="monotone"
+                name={t("SLL Cases")}
+                dataKey="SLL"
+                stroke="#a3d73c" // use primary when only SLL is shown
+                fill="url(#colorPrimary)"
+                strokeWidth={2}
+                dot={{ r: 4, fill: "#11150b", stroke: "#a3d73c", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#a3d73c", stroke: "#11150b" }}
+                animationDuration={1500}
+              />
+            )}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

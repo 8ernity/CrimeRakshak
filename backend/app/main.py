@@ -96,12 +96,17 @@ def _startup_seed() -> None:
         logger.error(f"Failed to auto-seed database: {e}")
 
     try:
-        from app.chat.data.case_generator import generate as generate_cases
-        from app.chat.data.loader import build_database
-        logger.info("Generating synthetic cases and building DuckDB dataset...")
-        generate_cases()
-        build_database()
-        logger.info("DuckDB dataset built successfully.")
+        import os
+        db_path = "crime_stats.duckdb"
+        if not os.path.exists(db_path):
+            from app.chat.data.case_generator import generate as generate_cases
+            from app.chat.data.loader import build_database
+            logger.info("Generating synthetic cases and building DuckDB dataset...")
+            generate_cases()
+            build_database()
+            logger.info("DuckDB dataset built successfully.")
+        else:
+            logger.info("DuckDB dataset already exists. Skipping generation.")
     except Exception as e:
         logger.error(f"Failed to build DuckDB dataset: {e}")
 

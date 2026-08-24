@@ -23,6 +23,8 @@ import com.example.crimerakshak.viewmodel.OverviewState
 import co.yml.charts.common.model.Point as YChartPoint
 import co.yml.charts.axis.AxisData
 import co.yml.charts.ui.linechart.model.IntersectionPoint
+import co.yml.charts.ui.linechart.model.LinePlotData
+import co.yml.charts.ui.linechart.model.LineStyle
 
 @Composable
 fun DashboardCharts(state: OverviewState) {
@@ -52,9 +54,11 @@ fun DashboardCharts(state: OverviewState) {
                 showSliceLabels = false,
                 animationDuration = 1500,
                 activeSliceAlpha = .9f,
-                isEllipsizeEnabled = true
+                isEllipsizeEnabled = true,
+                backgroundColor = Color.Transparent,
+                strokeWidth = 60f
             )
-            Box(modifier = Modifier.height(300.dp).fillMaxWidth()) {
+            Box(modifier = Modifier.height(240.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp)) {
                 DonutPieChart(
                     modifier = Modifier.fillMaxSize(),
                     pieChartData = pieChartData,
@@ -73,17 +77,23 @@ fun DashboardCharts(state: OverviewState) {
             }
             
             val xAxisData = AxisData.Builder()
-                .axisStepSize(100.dp)
+                .axisStepSize(40.dp)
                 .steps(barList.size - 1)
                 .bottomPadding(40.dp)
                 .axisLabelColor(TextMuted)
-                .labelData { index -> barList.getOrNull(index)?.label ?: "" }
+                .axisLineColor(TextMuted)
+                .axisLabelFontSize(10.sp)
+                .backgroundColor(Color.Transparent)
+                .labelData { index -> barList.getOrNull(index)?.label?.take(4) ?: "" }
                 .build()
                 
             val yAxisData = AxisData.Builder()
                 .steps(5)
                 .axisLabelColor(TextMuted)
-                .labelAndAxisLinePadding(20.dp)
+                .axisLineColor(TextMuted)
+                .labelAndAxisLinePadding(10.dp)
+                .axisLabelFontSize(10.sp)
+                .backgroundColor(Color.Transparent)
                 .labelData { i ->
                     val max = barList.maxOfOrNull { it.point.y } ?: 0f
                     val stepValue = max / 5
@@ -94,9 +104,10 @@ fun DashboardCharts(state: OverviewState) {
                 chartData = barList,
                 xAxisData = xAxisData,
                 yAxisData = yAxisData,
-                barStyle = BarStyle(paddingBetweenBars = 20.dp)
+                backgroundColor = Color.Transparent,
+                barStyle = BarStyle(paddingBetweenBars = 15.dp)
             )
-            Box(modifier = Modifier.height(300.dp).fillMaxWidth()) {
+            Box(modifier = Modifier.height(260.dp).fillMaxWidth()) {
                 BarChart(modifier = Modifier.fillMaxSize(), barChartData = barChartData)
             }
         }
@@ -112,17 +123,23 @@ fun DashboardCharts(state: OverviewState) {
             }
             
             val xAxisData = AxisData.Builder()
-                .axisStepSize(100.dp)
+                .axisStepSize(40.dp)
                 .steps(points.size - 1)
-                .labelData { i -> topDistricts.getOrNull(i)?.name?.take(5) ?: "" }
-                .labelAndAxisLinePadding(15.dp)
+                .labelData { i -> topDistricts.getOrNull(i)?.name?.take(3) ?: "" }
+                .labelAndAxisLinePadding(10.dp)
                 .axisLabelColor(TextMuted)
+                .axisLineColor(TextMuted)
+                .axisLabelFontSize(10.sp)
+                .backgroundColor(Color.Transparent)
                 .build()
                 
             val yAxisData = AxisData.Builder()
                 .steps(5)
-                .labelAndAxisLinePadding(20.dp)
+                .labelAndAxisLinePadding(10.dp)
                 .axisLabelColor(TextMuted)
+                .axisLineColor(TextMuted)
+                .axisLabelFontSize(10.sp)
+                .backgroundColor(Color.Transparent)
                 .labelData { i ->
                     val max = points.maxOfOrNull { it.y } ?: 0f
                     val stepValue = max / 5
@@ -130,19 +147,20 @@ fun DashboardCharts(state: OverviewState) {
                 }.build()
                 
             val lineChartData = LineChartData(
-                linePlotData = co.yml.charts.ui.linechart.model.LinePlotData(
+                linePlotData = LinePlotData(
                     lines = listOf(
                         Line(
                             dataPoints = points,
-                            lineStyle = co.yml.charts.ui.linechart.model.LineStyle(color = Color(0xFFa3d73c)),
-                            intersectionPoint = IntersectionPoint(color = Color.White)
+                            lineStyle = LineStyle(color = Color(0xFFa3d73c)),
+                            intersectionPoint = IntersectionPoint(color = Color(0xFFa3d73c), radius = 2.dp)
                         )
                     )
                 ),
                 xAxisData = xAxisData,
-                yAxisData = yAxisData
+                yAxisData = yAxisData,
+                backgroundColor = Color.Transparent
             )
-            Box(modifier = Modifier.height(300.dp).fillMaxWidth()) {
+            Box(modifier = Modifier.height(260.dp).fillMaxWidth()) {
                 LineChart(modifier = Modifier.fillMaxSize(), lineChartData = lineChartData)
             }
         }

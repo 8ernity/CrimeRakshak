@@ -16,7 +16,7 @@ scikit-learn>=1.4.0
 
 # ── Auth & RBAC API (FastAPI) ──
 fastapi>=0.110.0
-uvicorn[standard]>=0.30.0
+uvicorn>=0.30.0
 SQLAlchemy>=2.0.30
 alembic>=1.13.0
 pydantic>=2.7.0
@@ -29,10 +29,7 @@ email-validator>=2.1.0
 clerk-backend-api>=1.0.0
 
 # ── Image & Video Processing ──
-opencv-python-headless>=4.8.0
-Pillow>=10.0.0
-ultralytics>=8.0.0
-lap>=0.5.12
+# (Removed opencv, ultralytics, etc. to fit within Catalyst Basic limits)
 
 # ── Missing transitive dependencies ──
 numpy>=1.26.0

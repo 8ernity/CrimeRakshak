@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LaunchedEffect(Unit) {
                 try {
-                    val response = RetrofitClient.apiService.login("admin", "admin123")
+                    val response = RetrofitClient.apiService.login("admin", "ChangeMe123!")
                     RetrofitClient.authToken = response.accessToken
                 } catch (e: Exception) {
                     e.printStackTrace()

@@ -99,64 +99,64 @@
 
 /* ===== DARK THEME (DEFAULT) ===== */
 :root {
-  /* shadcn semantic tokens — CrimeScope dark palette */
-  --background: #080b14;
-  --foreground: #e2e8f0;
-  --card: #111827;
-  --card-foreground: #e2e8f0;
-  --popover: #111827;
-  --popover-foreground: #e2e8f0;
-  --primary: #a855f7;
-  --primary-foreground: #ffffff;
-  --secondary: #1e293b;
-  --secondary-foreground: #e2e8f0;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #e2e8f0;
-  --destructive: #ef4444;
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.08);
-  --ring: #a855f7;
-  --radius: 0.75rem;
+  /* Tactical Command dark palette */
+  --background: #11150b;
+  --foreground: #e1e4d3;
+  --card: #191d13;
+  --card-foreground: #e1e4d3;
+  --popover: #11150b;
+  --popover-foreground: #e1e4d3;
+  --primary: #a3d73c;
+  --primary-foreground: #11150b;
+  --secondary: #2e3226;
+  --secondary-foreground: #e1e4d3;
+  --muted: #191d13;
+  --muted-foreground: #8c9383;
+  --accent: #33362b;
+  --accent-foreground: #e1e4d3;
+  --destructive: #ffb4ab;
+  --border: rgba(255, 255, 255, 0.05);
+  --input: rgba(255, 255, 255, 0.05);
+  --ring: #a3d73c;
+  --radius: 0.5rem;
 
-  /* Chart colors (Soft Jewel Palette) */
-  --chart-1: #8b5cf6; /* Soft Indigo */
-  --chart-2: #10b981; /* Emerald Green (formerly blue) */
-  --chart-3: #6ca79e; /* Prev Month */
-  --chart-4: #84c2a3; /* Prev Year */
-  --chart-5: #fb923c; /* Peach/Orange */
+  /* Chart colors (Tactical Palette) */
+  --chart-1: #a3d73c;
+  --chart-2: #e1e4d3;
+  --chart-3: #8c9383;
+  --chart-4: #4caf50;
+  --chart-5: #f44336;
 
   /* Sidebar */
-  --sidebar: #0b0c10;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #a855f7;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(168, 85, 247, 0.1);
-  --sidebar-accent-foreground: #a855f7;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #a855f7;
+  --sidebar: #0c0f06;
+  --sidebar-foreground: #e1e4d3;
+  --sidebar-primary: #a3d73c;
+  --sidebar-primary-foreground: #11150b;
+  --sidebar-accent: rgba(163, 215, 60, 0.1);
+  --sidebar-accent-foreground: #a3d73c;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --sidebar-ring: #a3d73c;
 
   /* Brand */
-  --brand-purple: #8b5cf6;
-  --brand-blue: #3b82f6;
-  --brand-green: #10b981;
+  --brand-purple: #a3d73c;
+  --brand-blue: #a3d73c;
+  --brand-green: #4caf50;
   --brand-amber: #f59e0b;
-  --brand-red: #f43f5e;
+  --brand-red: #f44336;
   --brand-cyan: #0ea5e9;
-  --brand-violet: #c084fc;
+  --brand-violet: #a3d73c;
   --brand-orange: #fb923c;
-  --brand-teal: #2dd4bf;
-  --brand-lime: #a3e635;
-  --brand-rose: #fb7185;
+  --brand-teal: #a3d73c;
+  --brand-lime: #a3d73c;
+  --brand-rose: #f44336;
   --brand-pink: #f472b6;
 
   /* Surfaces */
-  --surface: #0b0c10;
-  --surface-panel: #111827;
-  --surface-card: #1f2937;
-  --surface-card-hover: #374151;
-  --surface-side: #0b0c10;
+  --surface: #11150b;
+  --surface-panel: #191d13;
+  --surface-card: #1a1d14;
+  --surface-card-hover: #282b20;
+  --surface-side: #0c0f06;
 
   /* Glass Card - Dark Mode (Default) */
   --glass-bg: rgba(17, 24, 39, 0.65);
