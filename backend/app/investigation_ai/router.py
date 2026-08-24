@@ -13,6 +13,7 @@ from app.investigation_ai import services
 from app.investigation_ai.schemas import (
     AnalysisJobResponse,
     CaseMediaSummaryResponse,
+    CrimeDecisionResponse,
     DetectionListResponse,
     EventListResponse,
     GenerateSummaryRequest,
@@ -246,6 +247,19 @@ def extract_investigation_events(
         events=[m for m in events],
         total_events=len(events),
     )
+
+
+@router.get(
+    "/media/{media_id}/decision",
+    response_model=CrimeDecisionResponse,
+    summary="Get Crime Decision Layer output (potential_crime, non_crime, uncertain)",
+)
+def get_investigation_crime_decision(
+    media_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> CrimeDecisionResponse:
+    return services.get_crime_decision(db=db, media_id=media_id, user=current_user)
 
 
 @router.post(

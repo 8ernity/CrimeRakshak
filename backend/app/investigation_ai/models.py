@@ -58,6 +58,9 @@ class InvestigationMedia(Base):
     summaries: Mapped[List["InvestigationSummary"]] = relationship(
         "InvestigationSummary", back_populates="media", cascade="all, delete-orphan"
     )
+    crime_decisions: Mapped[List["InvestigationCrimeDecision"]] = relationship(
+        "InvestigationCrimeDecision", back_populates="media", cascade="all, delete-orphan"
+    )
 
 
 class InvestigationAnalysisJob(Base):
@@ -172,4 +175,33 @@ class InvestigationSummary(Base):
     )
 
     media: Mapped[InvestigationMedia] = relationship("InvestigationMedia", back_populates="summaries")
+
+
+class InvestigationCrimeDecision(Base):
+    """Persisted Crime Decision Layer output for an evidence media item."""
+
+    __tablename__ = "investigation_crime_decisions"
+
+    decision_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    media_id: Mapped[int] = mapped_column(
+        ForeignKey("investigation_media.media_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    job_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("investigation_analysis_jobs.job_id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    decision: Mapped[str] = mapped_column(String(50), nullable=False)  # 'potential_crime', 'non_crime', 'uncertain'
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    evidence_score: Mapped[float] = mapped_column(Float, nullable=False)
+    reasons: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_events: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list
+    timestamps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list
+    track_ids: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list
+    safeguards_triggered: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list
+    is_video: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    media: Mapped[InvestigationMedia] = relationship("InvestigationMedia", back_populates="crime_decisions")
+
 

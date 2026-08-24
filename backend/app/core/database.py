@@ -43,7 +43,7 @@ def _init_engine():
 
 
 def _ensure_sqlite_schema(sqlite_uri: str):
-    """Ensure missing columns in SQLite tables are migrated automatically."""
+    """Ensure missing columns and tables in SQLite are created automatically."""
     try:
         import sqlite3
         db_path = sqlite_uri.replace("sqlite:///", "")
@@ -58,6 +58,31 @@ def _ensure_sqlite_schema(sqlite_uri: str):
             if "confidence" not in cols:
                 cursor.execute("ALTER TABLE investigation_events ADD COLUMN confidence FLOAT")
             conn.commit()
+
+        # Create investigation_crime_decisions table if missing
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='investigation_crime_decisions'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                CREATE TABLE investigation_crime_decisions (
+                    decision_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    media_id INTEGER NOT NULL,
+                    job_id INTEGER,
+                    decision VARCHAR(50) NOT NULL,
+                    confidence FLOAT NOT NULL,
+                    evidence_score FLOAT NOT NULL,
+                    reasons TEXT NOT NULL,
+                    evidence_events TEXT,
+                    timestamps TEXT,
+                    track_ids TEXT,
+                    safeguards_triggered TEXT,
+                    is_video BOOLEAN NOT NULL DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(media_id) REFERENCES investigation_media(media_id) ON DELETE CASCADE,
+                    FOREIGN KEY(job_id) REFERENCES investigation_analysis_jobs(job_id) ON DELETE SET NULL
+                )
+            """)
+            conn.commit()
+
         conn.close()
     except Exception as e:
         logger.warning(f"SQLite schema migration check skipped: {e}")
