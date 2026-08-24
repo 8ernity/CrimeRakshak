@@ -12,7 +12,8 @@ placeholders live in ``app/routers/protected.py``.
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+import os
 
 from app.core.config import settings
 from app.core.exceptions import AppHTTPException
@@ -129,3 +130,11 @@ def health_graph():
 @app.get("/", tags=["system"], include_in_schema=False)
 def root():
     return {"service": settings.PROJECT_NAME, "docs": "/docs"}
+
+
+@app.get("/app-release.apk", tags=["system"], summary="Download Mobile App")
+def download_app():
+    apk_path = os.path.join(os.path.dirname(__file__), "../static/app-release.apk")
+    if os.path.exists(apk_path):
+        return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename="CrimeRakshak.apk")
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})

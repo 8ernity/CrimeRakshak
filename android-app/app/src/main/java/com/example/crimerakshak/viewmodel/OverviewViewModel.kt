@@ -10,13 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.example.crimerakshak.api.SQLQueryRequest
+
 data class OverviewState(
     val isLoading: Boolean = true,
     val totalCrimes: Int = 0,
-    val activePatrols: Int = 124, // Keep static for now since we don't have an endpoint for this
-    val clearanceRate: Int = 84, // Keep static for now
+    val activePatrols: Int = 124,
+    val clearanceRate: Int = 84,
     val districts: List<DistrictAnalytics> = emptyList(),
     val hotspots: List<HotspotAnalytics> = emptyList(),
+    val pieChartData: List<Map<String, Any>> = emptyList(),
+    val barChartData: List<Map<String, Any>> = emptyList(),
     val error: String? = null
 )
 
@@ -32,11 +36,36 @@ class OverviewViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                // Wait briefly for token if initialized at same time
                 kotlinx.coroutines.delay(500)
                 
                 val districtsData = RetrofitClient.apiService.getDistricts()
                 val hotspotsData = RetrofitClient.apiService.getHotspots()
+                
+                // Fetch Pie Chart Data (Category Breakdown)
+                val pieSql = """
+                    SELECT 
+                        SUM(theft) as theft, 
+                        SUM(robbery) as robbery, 
+                        SUM(burglary_day + burglary_night) as burglary, 
+                        SUM(cyber_crime) as cyber_crime, 
+                        SUM(murder) as murder 
+                    FROM district_major_heads_yearly
+                """.trimIndent()
+                val pieResponse = RetrofitClient.apiService.runQuery(SQLQueryRequest(sql = pieSql))
+                
+                // Fetch Bar Chart Data (Monthly Comparison)
+                val barSql = """
+                    SELECT 
+                        crime_head, 
+                        january_2026 as current_month, 
+                        december_2025 as prev_month, 
+                        january_2025 as prev_year 
+                    FROM crime_review_summary 
+                    WHERE crime_head IN ('Theft', 'Economic Offences', 'Burglary', 'Cyber Crimes', 'Robbery', 'Murder') 
+                    ORDER BY january_2026 DESC 
+                    LIMIT 7
+                """.trimIndent()
+                val barResponse = RetrofitClient.apiService.runQuery(SQLQueryRequest(sql = barSql))
                 
                 val totalCrimes = districtsData.sumOf { it.total }
 
@@ -44,7 +73,9 @@ class OverviewViewModel : ViewModel() {
                     isLoading = false,
                     totalCrimes = totalCrimes,
                     districts = districtsData,
-                    hotspots = hotspotsData
+                    hotspots = hotspotsData,
+                    pieChartData = pieResponse.rows,
+                    barChartData = barResponse.rows
                 )
             } catch (e: Exception) {
                 e.printStackTrace()

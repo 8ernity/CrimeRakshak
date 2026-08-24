@@ -43,3 +43,20 @@ data class HotspotAnalytics(
     @SerializedName("cyberCrime")
     val cyberCrime: Int
 )
+
+data class SQLQueryRequest(
+    val sql: String,
+    @SerializedName("max_rows")
+    val maxRows: Int = 500
+)
+
+data class SQLQueryResponse(
+    val columns: List<String>,
+    val rows: List<Map<String, Any>>,
+    @SerializedName("row_count")
+    val rowCount: Int,
+    val sql: String,
+    val truncated: Boolean
+)
+
+

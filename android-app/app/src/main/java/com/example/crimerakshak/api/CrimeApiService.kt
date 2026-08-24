@@ -23,4 +23,7 @@ interface CrimeApiService {
 
     @POST("/api/v1/chat")
     suspend fun chat(@Body request: ChatRequest): ChatResponse
+
+    @POST("/api/v1/analytics/query")
+    suspend fun runQuery(@Body request: SQLQueryRequest): SQLQueryResponse
 }

@@ -214,6 +214,11 @@ fun OverviewScreen(
             }
         }
         
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Dynamic SQL-powered Charts
+        DashboardCharts(state)
+        
         Spacer(modifier = Modifier.height(32.dp))
     }
 }
