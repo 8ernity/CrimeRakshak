@@ -488,9 +488,9 @@ export default function InvestigationAIPage() {
                     <span className="text-sm font-medium text-slate-400">No active jobs.</span>
                   </div>
                 ) : (
-                  activeJobs.map((job) => (
+                  activeJobs.map((job, idx) => (
                     <div
-                      key={job.job_id}
+                      key={`job-${job.job_id}-${idx}`}
                       className="flex flex-col gap-2 p-3 rounded-xl bg-white border border-slate-100 shadow-xs"
                     >
                       <div className="flex justify-between items-center">

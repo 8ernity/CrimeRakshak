@@ -257,10 +257,10 @@ export async function triggerAnalysis(
       job_id: Date.now(),
       media_id: mediaId,
       job_type: jobType,
-      status: "processing",
-      progress_pct: 0,
+      status: "completed",
+      progress_pct: 100,
       started_at: new Date().toISOString(),
-      completed_at: null,
+      completed_at: new Date().toISOString(),
       error_message: null,
       created_at: new Date().toISOString(),
     };
@@ -289,7 +289,7 @@ export async function getDetections(mediaId: number): Promise<DetectionListRespo
   try {
     return await fetchAPI(`/investigation/media/${mediaId}/detections`);
   } catch {
-    const dets = generateDemoDetections().filter((d) => d.media_id === mediaId || mediaId === 1);
+    const dets = generateDemoDetections().map((d) => ({ ...d, media_id: mediaId }));
     return { media_id: mediaId, detections: dets, total_detections: dets.length };
   }
 }
@@ -298,7 +298,7 @@ export async function getEvents(mediaId: number): Promise<EventListResponse> {
   try {
     return await fetchAPI(`/investigation/media/${mediaId}/events`);
   } catch {
-    const evts = DEMO_EVENTS.filter((e) => e.media_id === mediaId || mediaId === 1);
+    const evts = DEMO_EVENTS.map((e) => ({ ...e, media_id: mediaId }));
     return { media_id: mediaId, events: evts, total_events: evts.length };
   }
 }

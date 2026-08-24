@@ -77,6 +77,8 @@ class DetectionResponse(BaseModel):
     confidence: float
     bbox: BoundingBox
     crop_image_path: Optional[str] = None
+    posture: Optional[str] = None
+    keypoints: Optional[List[dict]] = None
 
     class Config:
         from_attributes = True
@@ -102,6 +104,7 @@ class EventResponse(BaseModel):
     frame_end: int
     tracking_id: Optional[int] = None
     confidence: Optional[float] = None
+    posture: Optional[str] = None
     linked_person_id: Optional[str] = None
     linked_fir_id: Optional[str] = None
     created_at: datetime

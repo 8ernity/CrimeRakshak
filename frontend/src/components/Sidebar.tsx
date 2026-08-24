@@ -183,7 +183,7 @@ export function Sidebar() {
                   const isActive = pathname === item.href;
                   return (
                     <Link
-                      key={item.href}
+                      key={`${section.title}-${item.label}-${item.href}`}
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       title={collapsed ? item.label : undefined}
