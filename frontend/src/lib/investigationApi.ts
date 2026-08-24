@@ -289,8 +289,11 @@ export async function getDetections(mediaId: number): Promise<DetectionListRespo
   try {
     return await fetchAPI(`/investigation/media/${mediaId}/detections`);
   } catch {
-    const dets = generateDemoDetections().map((d) => ({ ...d, media_id: mediaId }));
-    return { media_id: mediaId, detections: dets, total_detections: dets.length };
+    if (mediaId === 1) {
+      const dets = generateDemoDetections().map((d) => ({ ...d, media_id: mediaId }));
+      return { media_id: mediaId, detections: dets, total_detections: dets.length };
+    }
+    return { media_id: mediaId, detections: [], total_detections: 0 };
   }
 }
 
@@ -298,8 +301,11 @@ export async function getEvents(mediaId: number): Promise<EventListResponse> {
   try {
     return await fetchAPI(`/investigation/media/${mediaId}/events`);
   } catch {
-    const evts = DEMO_EVENTS.map((e) => ({ ...e, media_id: mediaId }));
-    return { media_id: mediaId, events: evts, total_events: evts.length };
+    if (mediaId === 1) {
+      const evts = DEMO_EVENTS.map((e) => ({ ...e, media_id: mediaId }));
+      return { media_id: mediaId, events: evts, total_events: evts.length };
+    }
+    return { media_id: mediaId, events: [], total_events: 0 };
   }
 }
 
@@ -342,34 +348,37 @@ export async function getSummary(
       { method: forceRefresh ? "POST" : "GET" }
     );
   } catch {
-    return {
-      media_id: mediaId,
-      summary_text: `Forensic analysis of media ID ${mediaId} identified multi-object detections across active video frames. All observations represent automated computer vision outputs requiring officer verification.`,
-      observed_events: [
-        "Subject (Track #1) entered surveillance frame.",
-        "Posture anomaly / possible person down flag observed at 8.0s.",
-        "Vehicle (Track #2) observed traversing boundary area."
-      ],
-      relevant_timestamps: [
-        "0.0s - 15.0s: Subject (Track #1) active across frames 0 - 450.",
-        "8.0s: Posture anomaly detected."
-      ],
-      detected_objects_summary: [
-        "Person: Active track (Track #1)",
-        "Vehicle: Active track (Track #2)"
-      ],
-      evidence_references: [
-        `Media ID: ${mediaId}`,
-        "Automated YOLOv8 + ByteTrack detection logs"
-      ],
-      uncertainty_limitations: [
-        "Computer vision detections are probabilistic automated outputs.",
-        "Frame sampling interval creates temporal gaps between evaluated frames.",
-        "NEUTRAL FORENSIC NOTICE: Video evidence alone does not establish criminal intent or guilt."
-      ],
-      provider_used: "llm",
-      created_at: new Date().toISOString()
-    };
+    if (mediaId === 1) {
+      return {
+        media_id: mediaId,
+        summary_text: `Forensic analysis of media ID ${mediaId} identified multi-object detections across active video frames. All observations represent automated computer vision outputs requiring officer verification.`,
+        observed_events: [
+          "Subject (Track #1) entered surveillance frame.",
+          "Posture anomaly / possible person down flag observed at 8.0s.",
+          "Vehicle (Track #2) observed traversing boundary area."
+        ],
+        relevant_timestamps: [
+          "0.0s - 15.0s: Subject (Track #1) active across frames 0 - 450.",
+          "8.0s: Posture anomaly detected."
+        ],
+        detected_objects_summary: [
+          "Person: Active track (Track #1)",
+          "Vehicle: Active track (Track #2)"
+        ],
+        evidence_references: [
+          `Media ID: ${mediaId}`,
+          "Automated YOLOv8 + ByteTrack detection logs"
+        ],
+        uncertainty_limitations: [
+          "Computer vision detections are probabilistic automated outputs.",
+          "Frame sampling interval creates temporal gaps between evaluated frames.",
+          "NEUTRAL FORENSIC NOTICE: Video evidence alone does not establish criminal intent or guilt."
+        ],
+        provider_used: "llm",
+        created_at: new Date().toISOString()
+      };
+    }
+    return null;
   }
 }
 
