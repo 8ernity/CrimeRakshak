@@ -15,13 +15,21 @@ import {
   Globe,
   Volume2,
   VolumeX,
-  Radio,
   Siren,
   Square,
   Vibrate,
+  Compass,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import type { SensorEvent } from "@/lib/sentinelApi";
-import { BENGALURU_WARDS_GEOJSON } from "@/data/bengaluruWards";
+import {
+  ALL_INDIA_NATIONAL_ZONES,
+  KARNATAKA_DISTRICT_ZONES,
+  BENGALURU_CIRCULAR_WARDS,
+  getScopeCenterAndZoom,
+  type GeographicRiskZone,
+} from "@/data/nationalRiskZones";
 import {
   announceHotspotZone,
   announceSensorEvent,
@@ -42,6 +50,7 @@ interface SentinelMapProps {
 }
 
 type MapTileStyle = "VOYAGER" | "STREET" | "SATELLITE" | "DARK";
+type MapScope = "BENGALURU" | "KARNATAKA" | "NATIONAL";
 
 const TILE_SERVERS: Record<MapTileStyle, { url: string; subdomains?: string; maxZoom: number; label: string }> = {
   VOYAGER: {
@@ -76,26 +85,26 @@ const SENSOR_COLORS: Record<string, string> = {
   gunshot:    "#7c3aed",  // purple
 };
 
-const RISK_TIER_STYLES = {
+const CIRCLE_RISK_STYLES = {
   high: {
     fillColor: "#ef4444",
     fillOpacity: 0.32,
     color: "#dc2626",
-    weight: 2,
+    weight: 2.5,
     opacity: 0.95,
   },
   medium: {
     fillColor: "#f59e0b",
     fillOpacity: 0.25,
     color: "#d97706",
-    weight: 1.8,
+    weight: 2,
     opacity: 0.90,
   },
   low: {
     fillColor: "#0284c7",
     fillOpacity: 0.18,
     color: "#0369a1",
-    weight: 1.5,
+    weight: 1.8,
     opacity: 0.80,
   },
 } as const;
@@ -125,10 +134,11 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
   const mapWrapperRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
-  const wardsLayerRef = useRef<any>(null);
+  const circularZonesLayerRef = useRef<any>(null);
   const eventsLayerRef = useRef<any>(null);
 
   const [leafletReady, setLeafletReady] = useState(false);
+  const [mapScope, setMapScope] = useState<MapScope>("NATIONAL");
   const [tileStyle, setTileStyle] = useState<MapTileStyle>("VOYAGER");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
@@ -182,10 +192,12 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
     if (!leafletReady || !containerRef.current || mapRef.current) return;
     const L = window.L;
 
+    const initial = getScopeCenterAndZoom(mapScope);
+
     const map = L.map(containerRef.current, {
-      center: [12.9716, 77.5946],
-      zoom: 12,
-      minZoom: 10,
+      center: initial.center,
+      zoom: initial.zoom,
+      minZoom: 4,
       maxZoom: 18,
       zoomControl: false,
       attributionControl: false,
@@ -194,15 +206,15 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
     // Custom positioned zoom control
     L.control.zoom({ position: "topleft" }).addTo(map);
 
-    // Initial tile layer (Voyager by default for crisp clear maps)
+    // Initial tile layer
     const initialConfig = TILE_SERVERS[tileStyle];
     tileLayerRef.current = L.tileLayer(initialConfig.url, {
       maxZoom: initialConfig.maxZoom,
       subdomains: initialConfig.subdomains || "abc",
     }).addTo(map);
 
-    // Layer groups for clean layering: Wards below, Sensor Points above
-    wardsLayerRef.current = L.layerGroup().addTo(map);
+    // Layer groups for clean layering: Circular zones below, Sensor Points above
+    circularZonesLayerRef.current = L.layerGroup().addTo(map);
     eventsLayerRef.current = L.layerGroup().addTo(map);
 
     mapRef.current = map;
@@ -211,35 +223,35 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
     const styleEl = document.createElement("style");
     styleEl.id = "sentinel-gis-map-styles";
     styleEl.innerHTML = `
-      .ward-gis-label {
-        background: rgba(15, 23, 42, 0.85) !important;
-        backdrop-filter: blur(6px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
-        border-radius: 6px !important;
-        padding: 2px 7px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+      .circle-zone-label {
+        background: rgba(15, 23, 42, 0.92) !important;
+        backdrop-filter: blur(8px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 999px !important;
+        padding: 3px 9px !important;
+        box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.4) !important;
         color: #ffffff !important;
-        font-size: 10px !important;
+        font-size: 11px !important;
         font-weight: 800 !important;
-        letter-spacing: 0.05em !important;
+        letter-spacing: 0.04em !important;
         text-transform: uppercase !important;
         pointer-events: none !important;
         white-space: nowrap !important;
       }
-      .ward-gis-label::before {
+      .circle-zone-label::before {
         display: none !important;
       }
       .leaflet-popup-content-wrapper {
-        background: rgba(15, 23, 42, 0.95) !important;
+        background: rgba(15, 23, 42, 0.96) !important;
         backdrop-filter: blur(16px) !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         border-radius: 14px !important;
         color: #f8fafc !important;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55) !important;
         padding: 4px !important;
       }
       .leaflet-popup-tip {
-        background: rgba(15, 23, 42, 0.95) !important;
+        background: rgba(15, 23, 42, 0.96) !important;
       }
       .leaflet-popup-close-button {
         color: #94a3b8 !important;
@@ -265,9 +277,9 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         map.invalidateSize();
       }
     }, 200);
-  }, [leafletReady, tileStyle]);
+  }, [leafletReady]);
 
-  // Update Tile Layer when style changes
+  // Switch Tile Layer when style changes
   useEffect(() => {
     if (!mapRef.current || !window.L) return;
     const L = window.L;
@@ -288,117 +300,144 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
     }
   }, [tileStyle]);
 
-  // Render Ward Choropleth Polygons with Continuous Ambulance Siren & Vibration
+  // Handle Scope Change (Pan/Zoom map to target scope)
+  const handleScopeChange = useCallback((newScope: MapScope) => {
+    setMapScope(newScope);
+    if (!mapRef.current) return;
+    const { center, zoom } = getScopeCenterAndZoom(newScope);
+    mapRef.current.setView(center, zoom, { animate: true, duration: 1.2 });
+  }, []);
+
+  // Render Round / Circle Crime Zones for selected scope
   useEffect(() => {
-    if (!leafletReady || !mapRef.current || !wardsLayerRef.current || !window.L) return;
+    if (!leafletReady || !mapRef.current || !circularZonesLayerRef.current || !window.L) return;
     const L = window.L;
-    const wardsGroup = wardsLayerRef.current;
-    wardsGroup.clearLayers();
+    const zonesGroup = circularZonesLayerRef.current;
+    zonesGroup.clearLayers();
 
     try {
-      const geoJsonLayer = L.geoJSON(BENGALURU_WARDS_GEOJSON as any, {
-        style: (feature: any) => {
-          const riskLevel = (feature?.properties?.risk_level || "low") as "high" | "medium" | "low";
-          return RISK_TIER_STYLES[riskLevel] || RISK_TIER_STYLES.low;
-        },
-        onEachFeature: (feature: any, layer: any) => {
-          const props = feature.properties || {};
-          const wardId = props.ward_id;
-          const wardName = props.ward_name || "Ward";
-          const district = props.district || "Bengaluru";
-          const riskLevel = (props.risk_level || "low").toUpperCase();
-          const riskScore = props.risk_score || 50;
+      const activeZoneList: GeographicRiskZone[] =
+        mapScope === "NATIONAL"
+          ? ALL_INDIA_NATIONAL_ZONES
+          : mapScope === "KARNATAKA"
+          ? KARNATAKA_DISTRICT_ZONES
+          : BENGALURU_CIRCULAR_WARDS;
 
-          // Clear centered label
-          layer.bindTooltip(wardName, {
-            permanent: true,
-            direction: "center",
-            className: "ward-gis-label",
-          });
+      activeZoneList.forEach((zone: GeographicRiskZone) => {
+        const isHigh = zone.risk_level === "high";
+        const style = CIRCLE_RISK_STYLES[zone.risk_level] || CIRCLE_RISK_STYLES.low;
 
-          // Interactive click & hover with continuous ambulance siren
-          layer.on({
-            mouseover: (e: any) => {
-              const target = e.target;
-              target.setStyle({
-                weight: 3.5,
-                color: "#ffffff",
-                fillOpacity: (props.risk_level === "high" ? 0.45 : props.risk_level === "medium" ? 0.38 : 0.30),
+        // 1. Pulsing Outer Radar Ring for High Risk Zones
+        if (isHigh) {
+          L.circle([zone.lat, zone.lng], {
+            radius: zone.radiusMeters * 1.25,
+            fillColor: "transparent",
+            color: "#ef4444",
+            weight: 1.5,
+            opacity: 0.5,
+            dashArray: "6 4",
+            interactive: false,
+          }).addTo(zonesGroup);
+        }
+
+        // 2. Main High-Visibility Round Crime Zone Circle
+        const circleZone = L.circle([zone.lat, zone.lng], {
+          radius: zone.radiusMeters,
+          ...style,
+        });
+
+        // Centered Round Badge Label
+        circleZone.bindTooltip(zone.name, {
+          permanent: true,
+          direction: "center",
+          className: "circle-zone-label",
+        });
+
+        // Hover & Click Interactions
+        circleZone.on({
+          mouseover: (e: any) => {
+            e.target.setStyle({
+              weight: 4,
+              color: "#ffffff",
+              fillOpacity: isHigh ? 0.48 : 0.38,
+            });
+          },
+          mouseout: (e: any) => {
+            e.target.setStyle(style);
+          },
+          click: (e: any) => {
+            if (mapRef.current) {
+              mapRef.current.setView([zone.lat, zone.lng], mapScope === "NATIONAL" ? 9 : 13, {
+                animate: true,
               });
-            },
-            mouseout: (e: any) => {
-              geoJsonLayer.resetStyle(e.target);
-            },
-            click: (e: any) => {
-              const map = mapRef.current;
-              if (map) {
-                map.fitBounds(layer.getBounds(), {
-                  padding: [40, 40],
-                  maxZoom: 14,
-                  animate: true,
-                });
+            }
+
+            if (isHigh) {
+              setActiveSirenAlert({
+                title: "HIGH-RISK AMBULANCE SIREN ACTIVE",
+                ward: zone.name,
+                riskScore: zone.risk_score,
+                activeCount: zone.active_sensors,
+              });
+              setIsVibrating(true);
+            } else {
+              setActiveSirenAlert(null);
+              setIsVibrating(false);
+            }
+
+            announceHotspotZone(
+              zone.name,
+              zone.risk_level,
+              zone.risk_score,
+              zone.active_sensors,
+              audioEnabled,
+              () => {
+                setIsVibrating((v) => !v);
               }
+            );
+          },
+        });
 
-              const count = eventsPerWard[wardId] || 0;
-
-              // Trigger continuous ambulance siren and vibration for high risk
-              if (props.risk_level === "high") {
-                setActiveSirenAlert({
-                  title: "AMBULANCE & HIGH-RISK SIREN ACTIVE",
-                  ward: wardName,
-                  riskScore,
-                  activeCount: count,
-                });
-                setIsVibrating(true);
-              } else {
-                setActiveSirenAlert(null);
-                setIsVibrating(false);
-              }
-
-              announceHotspotZone(
-                wardName,
-                props.risk_level,
-                riskScore,
-                count,
-                audioEnabled,
-                () => {
-                  setIsVibrating((v) => !v);
-                }
-              );
-            },
-          });
-
-          // Rich Ward Details Popup
-          const activeCount = eventsPerWard[wardId] || 0;
-          const badgeBg = props.risk_level === "high" ? "#dc2626" : props.risk_level === "medium" ? "#d97706" : "#0284c7";
-
-          const popupHtml = `
-            <div style="min-width: 220px; font-family: system-ui, -apple-system, sans-serif; padding: 4px 6px;">
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; gap: 8px;">
-                <span style="font-weight: 800; font-size: 14px; color: #ffffff;">${wardName}</span>
-                <span style="font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: ${badgeBg}; color: #ffffff; letter-spacing: 0.05em;">
-                  ${riskLevel} RISK
-                </span>
-              </div>
-              <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
-                District: <strong style="color: #e2e8f0;">${district}</strong> · Predictive Risk: <strong style="color: #38bdf8;">${riskScore}/100</strong>
-              </div>
-              <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; font-size: 11px; display:flex; justify-content:space-between; align-items:center;">
-                <span style="color: #cbd5e1;">Live Sensor Detections:</span>
-                <strong style="color: ${activeCount > 0 ? '#f87171' : '#94a3b8'}; font-size: 13px;">${activeCount} Active</strong>
-              </div>
+        // Rich Circular Zone Popup
+        const badgeBg = isHigh ? "#dc2626" : zone.risk_level === "medium" ? "#d97706" : "#0284c7";
+        const popupHtml = `
+          <div style="min-width: 230px; font-family: system-ui, -apple-system, sans-serif; padding: 4px 6px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; gap: 8px;">
+              <span style="font-weight: 800; font-size: 14px; color: #ffffff;">${zone.name}</span>
+              <span style="font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: ${badgeBg}; color: #ffffff; letter-spacing: 0.05em;">
+                ${zone.risk_level.toUpperCase()} RISK
+              </span>
             </div>
-          `;
+            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
+              Region: <strong style="color: #e2e8f0;">${zone.stateOrRegion}</strong> · Threat Index: <strong style="color: #38bdf8;">${zone.risk_score}/100</strong>
+            </div>
+            ${zone.ipc_cases ? `<div style="font-size: 11px; color: #cbd5e1; margin-bottom: 6px;">Annual IPC Cases: <strong style="color:#ffffff;">${zone.ipc_cases.toLocaleString()}</strong></div>` : ""}
+            <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; font-size: 11px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="color: #cbd5e1;">Live Grid Telemetry:</span>
+              <strong style="color: ${isHigh ? '#f87171' : '#38bdf8'}; font-size: 13px;">${zone.active_sensors} Units Online</strong>
+            </div>
+          </div>
+        `;
 
-          layer.bindPopup(popupHtml);
-        },
+        circleZone.bindPopup(popupHtml);
+        circleZone.addTo(zonesGroup);
+
+        // 3. Center Target Core Point
+        const centerPoint = L.circleMarker([zone.lat, zone.lng], {
+          radius: isHigh ? 6 : 5,
+          fillColor: isHigh ? "#ef4444" : zone.risk_level === "medium" ? "#f59e0b" : "#0284c7",
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1,
+          interactive: false,
+        });
+        centerPoint.addTo(zonesGroup);
       });
-
-      geoJsonLayer.addTo(wardsGroup);
     } catch (err) {
-      console.warn("SentinelMap: Failed rendering Ward GeoJSON layer", err);
+      console.warn("SentinelMap: Failed rendering circular zones", err);
     }
-  }, [leafletReady, eventsPerWard, audioEnabled]);
+  }, [leafletReady, mapScope, eventsPerWard, audioEnabled]);
 
   // Render Sensor Event Markers (Top Layer)
   useEffect(() => {
@@ -407,12 +446,12 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
     const eventsGroup = eventsLayerRef.current;
     eventsGroup.clearLayers();
 
+    // Show individual sensor events
     events.forEach((ev) => {
       const fillColor = SENSOR_COLORS[ev.sensor_type] ?? "#2563eb";
       const isHigh = ev.priority === "high" || ev.sensor_type === "sos_button";
       const radius = isHigh ? 9 : 7;
 
-      // Pulse ring for urgent incidents
       if (isHigh) {
         L.circleMarker([ev.lat, ev.lng], {
           radius: radius + 8,
@@ -425,7 +464,6 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         }).addTo(eventsGroup);
       }
 
-      // High-visibility dot with clean dark/white halo
       const marker = L.circleMarker([ev.lat, ev.lng], {
         radius,
         fillColor,
@@ -435,7 +473,6 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         fillOpacity: 1,
       });
 
-      // TRIGGER AMBULANCE SIREN & VIBRATION ON SENSOR TAP
       marker.on("click", () => {
         if (isHigh) {
           setActiveSirenAlert({
@@ -486,8 +523,9 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
   // Recenter map handler
   const handleRecenter = useCallback(() => {
     if (!mapRef.current) return;
-    mapRef.current.setView([12.9716, 77.5946], 12, { animate: true });
-  }, []);
+    const { center, zoom } = getScopeCenterAndZoom(mapScope);
+    mapRef.current.setView(center, zoom, { animate: true });
+  }, [mapScope]);
 
   // Fullscreen toggle handler
   const toggleFullscreen = useCallback(() => {
@@ -518,7 +556,7 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
   return (
     <div
       ref={mapWrapperRef}
-      className={`relative w-full ${isFullscreen ? "h-screen" : "h-[540px] xl:h-[620px]"} bg-slate-950 overflow-hidden flex flex-col ${
+      className={`relative w-full ${isFullscreen ? "h-screen" : "h-[540px] xl:h-[640px]"} bg-slate-950 overflow-hidden flex flex-col ${
         activeSirenAlert ? "siren-active-strobe" : ""
       }`}
     >
@@ -540,7 +578,7 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] tracking-widest text-red-200 uppercase flex items-center gap-1">
-              <Vibrate className="h-3 w-3 animate-bounce" /> CONTINUOUS AMBULANCE SIREN & VIBRATION
+              <Vibrate className="h-3 w-3 animate-bounce" /> HIGH-RISK AMBULANCE SIREN & VIBRATION ACTIVE
             </span>
             <span className="text-sm font-black text-white">
               {activeSirenAlert.ward} — Threat Score {activeSirenAlert.riskScore}%
@@ -558,8 +596,50 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
       )}
 
       {/* Top Controls Toolbar */}
-      <div className="absolute top-4 right-4 z-[400] flex items-center gap-2">
-        {/* High-Risk Ambulance Siren Test / Toggle Button */}
+      <div className="absolute top-4 right-4 z-[400] flex flex-wrap items-center gap-2">
+        {/* GEOGRAPHIC SCOPE SELECTOR TABS (All-India / Karnataka / Bengaluru) */}
+        <div className="p-1 rounded-xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-md flex items-center gap-1">
+          <button
+            onClick={() => handleScopeChange("NATIONAL")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              mapScope === "NATIONAL"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+            title="View All-India National Metropolitan Round Crime Zones"
+          >
+            <Compass className="h-3.5 w-3.5 text-amber-400" />
+            <span>All India</span>
+          </button>
+
+          <button
+            onClick={() => handleScopeChange("KARNATAKA")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              mapScope === "KARNATAKA"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+            title="View Karnataka State Police District Zones"
+          >
+            <Building2 className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Karnataka</span>
+          </button>
+
+          <button
+            onClick={() => handleScopeChange("BENGALURU")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              mapScope === "BENGALURU"
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+            }`}
+            title="View Bengaluru Metropolitan Municipal Wards"
+          >
+            <MapPin className="h-3.5 w-3.5 text-sky-400" />
+            <span>Bengaluru Wards</span>
+          </button>
+        </div>
+
+        {/* High-Risk Siren Indicator / Toggle */}
         <button
           onClick={() => {
             if (activeSirenAlert) {
@@ -567,8 +647,8 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
             } else {
               setActiveSirenAlert({
                 title: "HIGH-RISK AMBULANCE SIREN ACTIVE",
-                ward: "Jayanagar",
-                riskScore: 91,
+                ward: mapScope === "NATIONAL" ? "Delhi NCR" : mapScope === "KARNATAKA" ? "Kalaburagi Dist" : "Jayanagar",
+                riskScore: mapScope === "NATIONAL" ? 95 : mapScope === "KARNATAKA" ? 88 : 91,
                 activeCount: 4,
               });
               startContinuousAmbulanceSiren();
@@ -580,7 +660,7 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
               ? "bg-red-600 text-white border-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.7)]"
               : "bg-slate-900/90 hover:bg-slate-800 text-rose-300 border-rose-900/50"
           }`}
-          title={activeSirenAlert ? "Click to Silence Ambulance Siren" : "High-Risk Zone Emergency Ambulance Siren"}
+          title={activeSirenAlert ? "Click to Silence Siren" : "High-Risk Zone Ambulance Siren"}
         >
           <Siren className={`h-4 w-4 ${activeSirenAlert ? "text-white animate-spin" : "text-rose-400"}`} />
           <span>{activeSirenAlert ? "SIREN ACTIVE" : "High-Risk Siren"}</span>
@@ -669,7 +749,7 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         <button
           onClick={handleRecenter}
           className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 shadow-lg backdrop-blur-md transition-all cursor-pointer"
-          title="Recenter Bengaluru Metro"
+          title="Recenter Map View"
         >
           <RotateCcw className="h-4 w-4" />
         </button>
@@ -684,41 +764,24 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         </button>
       </div>
 
-      {/* Top-Left Info Overlay */}
-      <div className="absolute top-4 left-14 z-[400] max-w-xs bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-2xl">
-        <div className="flex items-start gap-2.5">
-          <div className="p-1.5 rounded-lg bg-red-500/10 text-red-400 shrink-0 mt-0.5">
-            <Siren className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
-              BBMP GIS Fusion Overlay
-            </span>
-            <span className="text-[10px] text-slate-400 leading-tight mt-0.5">
-              Tap any high-risk zone for continuous ambulance siren & tactical vibration
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Bottom-Right Unified Legend */}
       <div className="absolute bottom-5 right-5 z-[400] bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl p-3.5 shadow-2xl flex flex-col gap-3 min-w-[210px]">
-        {/* Ward Risk Section */}
+        {/* Ward / District Risk Section */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <ShieldAlert className="h-3 w-3 text-slate-400" /> Ward Risk Zones
+            <ShieldAlert className="h-3 w-3 text-slate-400" /> Circular Crime Zones
           </span>
           <div className="grid grid-cols-3 gap-1.5 pt-0.5">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-500/15 border border-rose-500/30">
-              <span className="w-2.5 h-2.5 rounded-xs bg-rose-500 shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
               <span className="text-[10px] text-rose-300 font-bold">High</span>
             </div>
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/15 border border-amber-500/30">
-              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500 shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
               <span className="text-[10px] text-amber-300 font-bold">Medium</span>
             </div>
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-sky-500/15 border border-sky-500/30">
-              <span className="w-2.5 h-2.5 rounded-xs bg-sky-500 shrink-0" />
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" />
               <span className="text-[10px] text-sky-300 font-bold">Normal</span>
             </div>
           </div>
@@ -729,7 +792,7 @@ export function SentinelMap({ events, isLoading }: SentinelMapProps) {
         {/* Sensor Type Section */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Crosshair className="h-3 w-3 text-slate-400" /> Live Sensor Events
+            <Crosshair className="h-3 w-3 text-slate-400" /> Live Grid Sensors
           </span>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-0.5">
             {Object.entries(SENSOR_COLORS).map(([type, color]) => (
