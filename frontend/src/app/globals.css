@@ -380,3 +380,41 @@
     radial-gradient(at 80% 100%, rgba(14, 165, 233, 0.12) 0px, transparent 80%),
     radial-gradient(at 20% 100%, rgba(253, 230, 138, 0.08) 0px, transparent 80%);
 }
+.buttonupgrade {
+  width: fit-content;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  cursor: pointer;
+  gap: 0.4rem;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 30px;
+  text-shadow: 2px 2px 3px rgba(221, 255, 0, 0.3);
+  background: linear-gradient(15deg, #ddff00, #b8d100, #93a300, #6e7500, #ddff00, #b8d100, #93a300, #6e7500) no-repeat;
+  background-size: 300%;
+  color: #000;
+  border: none;
+  background-position: left center;
+  box-shadow: 0 30px 10px -20px rgba(221, 255, 0, 0.2);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.buttonupgrade:hover {
+  background-size: 320%;
+  background-position: right center;
+  color: #000;
+}
+
+.buttonupgrade:hover svg {
+  fill: #000;
+}
+
+.buttonupgrade svg {
+  width: 18px;
+  fill: #000;
+  transition: 0.3s ease;
+}
+
+
