@@ -64,10 +64,21 @@ export default function InvestigationAIPage() {
   const fetchMediaList = useCallback(async (filterFir?: string) => {
     const targetFir = filterFir !== undefined ? filterFir : firFilter;
     const res = await listMedia(targetFir.trim() || undefined);
-    setMediaItems(res.items);
-    if (res.items.length > 0) {
-      if (!selectedMedia || !res.items.find((m) => m.media_id === selectedMedia.media_id)) {
-        setSelectedMedia(res.items[0]);
+    
+    // Deduplicate items by media_id
+    const seen = new Set<number>();
+    const uniqueItems: InvestigationMedia[] = [];
+    for (const item of res.items) {
+      if (!seen.has(item.media_id)) {
+        seen.add(item.media_id);
+        uniqueItems.push(item);
+      }
+    }
+
+    setMediaItems(uniqueItems);
+    if (uniqueItems.length > 0) {
+      if (!selectedMedia || !uniqueItems.find((m) => m.media_id === selectedMedia.media_id)) {
+        setSelectedMedia(uniqueItems[0]);
       }
     } else {
       setSelectedMedia(null);
@@ -153,7 +164,10 @@ export default function InvestigationAIPage() {
       setSummaryData(null);
       setHighlightedTrackId(null);
 
-      setMediaItems((prev) => [newMedia, ...prev]);
+      setMediaItems((prev) => {
+        const filtered = prev.filter((m) => m.media_id !== newMedia.media_id);
+        return [newMedia, ...filtered];
+      });
       setSelectedMedia(newMedia);
 
       const job = await triggerAnalysis(newMedia.media_id);

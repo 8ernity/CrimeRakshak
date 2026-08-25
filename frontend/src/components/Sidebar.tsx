@@ -27,6 +27,7 @@ import {
   LogOut,
   Video,
   Radar,
+  Antenna,
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ const navSections: NavSection[] = [
       { href: "/investigation-ai", label: "AI Video Investigation", icon: Video },
       { href: "/ai-prediction", label: "AI Prediction", icon: Brain },
       { href: "/predictive-hotspots", label: "Predictive Hotspots", icon: Radar },
+      { href: "/sentinel-grid", label: "Sentinel Grid", icon: Antenna },
       { href: "/ai-assistant", label: "AI Copilot", icon: MessageSquare },
       { href: "/alerts", label: "Alert Center", icon: Bell },
       { href: "/simulator", label: "Digital Twin", icon: Cpu },

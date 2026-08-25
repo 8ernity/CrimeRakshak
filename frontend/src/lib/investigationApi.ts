@@ -190,7 +190,13 @@ export async function listMedia(firId?: string): Promise<MediaListResponse> {
       : "/investigation/media?limit=50&offset=0";
     return await fetchAPI(url);
   } catch {
-    const items = firId ? DEMO_MEDIA.filter((m) => m.fir_id === firId) : DEMO_MEDIA;
+    const rawItems = firId ? DEMO_MEDIA.filter((m) => m.fir_id === firId) : DEMO_MEDIA;
+    const seen = new Set<number>();
+    const items = rawItems.filter((m) => {
+      if (seen.has(m.media_id)) return false;
+      seen.add(m.media_id);
+      return true;
+    });
     return { items, total: items.length };
   }
 }
@@ -238,7 +244,12 @@ export async function uploadMedia(
       status: "uploaded",
       upload_timestamp: new Date().toISOString(),
     };
-    DEMO_MEDIA.unshift(newMedia);
+    const existingIdx = DEMO_MEDIA.findIndex((m) => m.media_id === newMedia.media_id);
+    if (existingIdx >= 0) {
+      DEMO_MEDIA[existingIdx] = newMedia;
+    } else {
+      DEMO_MEDIA.unshift(newMedia);
+    }
     return newMedia;
   }
 }

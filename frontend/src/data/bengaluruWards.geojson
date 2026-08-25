@@ -1,0 +1,388 @@
+{
+  "type": "FeatureCollection",
+  "name": "bengaluru_bbmp_wards",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "comment": "approximated ward boundary — replace with BBMP GeoJSON when available",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W17",
+        "ward_name": "Jayanagar",
+        "district": "South",
+        "risk_level": "high",
+        "risk_score": 91,
+        "lat": 12.9250,
+        "lng": 77.5938
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5850, 12.9320],
+            [77.6010, 12.9340],
+            [77.6040, 12.9210],
+            [77.5950, 12.9150],
+            [77.5840, 12.9220],
+            [77.5850, 12.9320]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W04",
+        "ward_name": "Majestic",
+        "district": "Central",
+        "risk_level": "high",
+        "risk_score": 88,
+        "lat": 12.9767,
+        "lng": 77.5713
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5640, 12.9830],
+            [77.5790, 12.9820],
+            [77.5800, 12.9720],
+            [77.5690, 12.9690],
+            [77.5620, 12.9740],
+            [77.5640, 12.9830]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W22",
+        "ward_name": "KR Market",
+        "district": "Central",
+        "risk_level": "high",
+        "risk_score": 84,
+        "lat": 12.9634,
+        "lng": 77.5780
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5710, 12.9690],
+            [77.5850, 12.9680],
+            [77.5870, 12.9580],
+            [77.5760, 12.9560],
+            [77.5690, 12.9610],
+            [77.5710, 12.9690]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W11",
+        "ward_name": "Koramangala",
+        "district": "South",
+        "risk_level": "high",
+        "risk_score": 79,
+        "lat": 12.9352,
+        "lng": 77.6245
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6140, 12.9440],
+            [77.6330, 12.9420],
+            [77.6370, 12.9280],
+            [77.6250, 12.9240],
+            [77.6130, 12.9310],
+            [77.6140, 12.9440]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W08",
+        "ward_name": "Indiranagar",
+        "district": "East",
+        "risk_level": "medium",
+        "risk_score": 67,
+        "lat": 12.9784,
+        "lng": 77.6408
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6320, 12.9870],
+            [77.6500, 12.9850],
+            [77.6510, 12.9710],
+            [77.6380, 12.9680],
+            [77.6290, 12.9760],
+            [77.6320, 12.9870]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W31",
+        "ward_name": "Whitefield",
+        "district": "East",
+        "risk_level": "medium",
+        "risk_score": 72,
+        "lat": 12.9698,
+        "lng": 77.7500
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.7380, 12.9820],
+            [77.7620, 12.9790],
+            [77.7640, 12.9580],
+            [77.7470, 12.9550],
+            [77.7350, 12.9660],
+            [77.7380, 12.9820]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W09",
+        "ward_name": "MG Road",
+        "district": "Central",
+        "risk_level": "medium",
+        "risk_score": 65,
+        "lat": 12.9747,
+        "lng": 77.6094
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6010, 12.9810],
+            [77.6180, 12.9800],
+            [77.6190, 12.9690],
+            [77.6060, 12.9670],
+            [77.5990, 12.9730],
+            [77.6010, 12.9810]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W10",
+        "ward_name": "Shivajinagar",
+        "district": "Central",
+        "risk_level": "medium",
+        "risk_score": 68,
+        "lat": 12.9866,
+        "lng": 77.5993
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5910, 12.9940],
+            [77.6080, 12.9930],
+            [77.6090, 12.9810],
+            [77.5970, 12.9790],
+            [77.5890, 12.9850],
+            [77.5910, 12.9940]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W55",
+        "ward_name": "HSR Layout",
+        "district": "South",
+        "risk_level": "medium",
+        "risk_score": 61,
+        "lat": 12.9116,
+        "lng": 77.6473
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6370, 12.9200],
+            [77.6580, 12.9180],
+            [77.6600, 12.9030],
+            [77.6450, 12.9010],
+            [77.6350, 12.9090],
+            [77.6370, 12.9200]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W02",
+        "ward_name": "Hebbal",
+        "district": "North",
+        "risk_level": "medium",
+        "risk_score": 63,
+        "lat": 13.0351,
+        "lng": 77.5985
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5870, 13.0470],
+            [77.6110, 13.0440],
+            [77.6120, 13.0240],
+            [77.5960, 13.0220],
+            [77.5850, 13.0320],
+            [77.5870, 13.0470]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W03",
+        "ward_name": "Rajajinagar",
+        "district": "West",
+        "risk_level": "medium",
+        "risk_score": 59,
+        "lat": 12.9942,
+        "lng": 77.5529
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5430, 13.0040],
+            [77.5630, 13.0020],
+            [77.5650, 12.9850],
+            [77.5510, 12.9830],
+            [77.5410, 12.9910],
+            [77.5430, 13.0040]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W45",
+        "ward_name": "Yelahanka",
+        "district": "North",
+        "risk_level": "low",
+        "risk_score": 42,
+        "lat": 13.1005,
+        "lng": 77.5963
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5820, 13.1150],
+            [77.6110, 13.1120],
+            [77.6140, 13.0870],
+            [77.5930, 13.0840],
+            [77.5790, 13.0970],
+            [77.5820, 13.1150]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W52",
+        "ward_name": "JP Nagar",
+        "district": "South",
+        "risk_level": "low",
+        "risk_score": 44,
+        "lat": 12.9063,
+        "lng": 77.5857
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5760, 12.9160],
+            [77.5960, 12.9140],
+            [77.5980, 12.8970],
+            [77.5840, 12.8940],
+            [77.5740, 12.9030],
+            [77.5760, 12.9160]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W60",
+        "ward_name": "Electronic City",
+        "district": "South",
+        "risk_level": "low",
+        "risk_score": 38,
+        "lat": 12.8451,
+        "lng": 77.6643
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.6510, 12.8580],
+            [77.6780, 12.8550],
+            [77.6810, 12.8330],
+            [77.6600, 12.8300],
+            [77.6480, 12.8420],
+            [77.6510, 12.8580]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "ward_id": "BLR-W57",
+        "ward_name": "Bannerghatta",
+        "district": "South",
+        "risk_level": "low",
+        "risk_score": 36,
+        "lat": 12.8827,
+        "lng": 77.5977
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.5870, 12.8940],
+            [77.6090, 12.8920],
+            [77.6110, 12.8710],
+            [77.5950, 12.8680],
+            [77.5850, 12.8790],
+            [77.5870, 12.8940]
+          ]
+        ]
+      }
+    }
+  ]
+}
