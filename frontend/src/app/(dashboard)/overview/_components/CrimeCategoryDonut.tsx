@@ -1,7 +1,9 @@
 "use client";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ipcCrimes } from "@/data/crimeData";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { chartPalette } from "@/lib/design-tokens";
 import { useLanguage } from "@/components/LanguageContext";
 
 export function CrimeCategoryDonut() {
@@ -20,76 +22,83 @@ export function CrimeCategoryDonut() {
     { name: t("Other Categories"), value: otherTotal },
   ];
 
-  // Tactical colors matching Chart.js config in the HTML
-  const tacticalColors = [
-    "#a3d73c", // primary
-    "#e1e4d3", // on-background
-    "#8c9383", // muted
-    "#4caf50", 
-    "#8bc34a",
-    "#cddc39",
-    "#ffeb3b",
-    "#ffc107",
-    "#ff9800"
-  ];
-
   return (
-    <div className="bg-surface/40 border border-white/5 p-5 rounded-xl h-full flex flex-col group hover:bg-surface/60 transition-colors">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-on-background/70">
-          {t("Category Share")}
-        </h3>
-        <span className="material-symbols-outlined text-primary text-sm">
-          donut_large
-        </span>
-      </div>
-      <div className="flex-1 relative min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius="75%" // 80% cutout equivalent
-              outerRadius="95%"
-              paddingAngle={2}
-              dataKey="value"
-              animationDuration={1500}
-              animationEasing="ease-out"
-              stroke="transparent" // Remove border
-            >
-              {data.map((_, i) => (
-                <Cell
-                  key={i}
-                  fill={tacticalColors[i % tacticalColors.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{
-                background: "rgba(17, 21, 11, 0.9)", // surface color
-                border: "1px solid rgba(163, 215, 60, 0.2)", // primary/20
-                borderRadius: "8px",
-                color: "#e1e4d3",
-                fontSize: "12px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.5)",
-              }}
-              itemStyle={{ color: "#e1e4d3", fontWeight: 600 }}
-              formatter={(value: any) => value?.toLocaleString("en-IN")}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+    <Card className="glass-card relative overflow-hidden transition-all duration-300 shadow-md hover:shadow-xl hover:border-brand-purple/20">
+      <CardHeader className="pb-2">
+        <CardTitle className="font-heading text-base text-foreground flex items-center justify-between gap-2">
+          <span>{t("Crime Category Breakdown")}</span>
+          <span className="text-xs font-semibold text-brand-purple bg-brand-purple/10 px-2.5 py-0.5 rounded-full border border-brand-purple/20">2024 Annual Telemetry</span>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          {t("Official IPC statewide statutory volume share")}
+        </p>
+      </CardHeader>
+      <CardContent className="relative">
+        <div className="h-[320px] w-full relative">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <defs>
+                <filter id="pieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="6" floodOpacity="0.15" />
+                </filter>
+              </defs>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="45%"
+                innerRadius={60}
+                outerRadius={95}
+                paddingAngle={2}
+                dataKey="value"
+                animationDuration={1500}
+                animationEasing="ease-out"
+                style={{ filter: "url(#pieShadow)" }}
+              >
+                {data.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={chartPalette[i % chartPalette.length]}
+                    stroke="rgba(255, 255, 255, 0.8)"
+                    strokeWidth={2}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  background: "rgba(255, 255, 255, 0.85)",
+                  backdropFilter: "blur(20px)",
+                  WebkitBackdropFilter: "blur(20px)",
+                  border: "1px solid rgba(255, 255, 255, 0.7)",
+                  borderRadius: "16px",
+                  boxShadow: "0 8px 30px rgba(80, 140, 255, 0.12)",
+                  color: "#0f172a",
+                  fontSize: 12,
+                }}
+                itemStyle={{ color: "#0f172a", fontWeight: 600 }}
+                formatter={(value: any) => value?.toLocaleString("en-IN")}
+              />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{ fontSize: 11 }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
 
-        {/* Center Donut Label */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[10px] uppercase font-bold text-on-background/60 tracking-wider">
-            {t("TOTAL IPC")}
-          </span>
-          <span className="text-2xl font-bold text-on-background">
-            {stateTotalIpc.toLocaleString("en-IN")}
-          </span>
+          {/* Center Donut Label displaying Official Total */}
+          <div className="absolute inset-0 top-[-25px] flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+              {t("TOTAL IPC")}
+            </span>
+            <span className="text-base font-mono font-bold text-foreground">
+              {stateTotalIpc.toLocaleString("en-IN")}
+            </span>
+            <span className="text-[10px] uppercase font-mono font-bold text-emerald-500 tracking-wider mt-0.5 pt-0.5 border-t border-border/40">
+              + SLL: 78,900
+            </span>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
