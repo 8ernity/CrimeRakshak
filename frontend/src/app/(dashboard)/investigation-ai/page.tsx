@@ -17,7 +17,7 @@ import { ConfigureModal } from "./ConfigureModal";
 import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary } from "./types";
 import {
   listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis, getSummary,
-  getMediaUrl, DEMO_VIDEO_SRC,
+  getMediaUrl, DEMO_VIDEO_SRC, getJobStatus,
 } from "@/lib/investigationApi";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -150,6 +150,43 @@ export default function InvestigationAIPage() {
       videoRef.current.currentTime = sec;
     }
   }, []);
+
+  /* ── Poll Active Jobs ── */
+  useEffect(() => {
+    const pendingJobs = activeJobs.filter(j => j.status === 'queued' || j.status === 'processing');
+    if (pendingJobs.length === 0) return;
+
+    const interval = setInterval(async () => {
+      let changed = false;
+      const updatedJobs = await Promise.all(
+        activeJobs.map(async (job) => {
+          if (job.status === 'queued' || job.status === 'processing') {
+            try {
+              const res = await getJobStatus(job.job_id);
+              if (res.status !== job.status) {
+                changed = true;
+                // If it just completed, refresh data if it's the selected media
+                if (res.status === 'completed' && selectedMedia && selectedMedia.media_id === res.media_id) {
+                  getDetections(res.media_id).then(d => setDetections(d.detections || []));
+                  getEvents(res.media_id).then(e => setEvents(e.events || []));
+                  fetchSummary(res.media_id);
+                }
+                return { ...job, ...res, fileName: job.fileName };
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          return job;
+        })
+      );
+      if (changed) {
+        setActiveJobs(updatedJobs);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeJobs, selectedMedia, fetchSummary]);
 
   /* ── Select Media Item ── */
   const handleSelectMedia = useCallback((media: InvestigationMedia) => {
@@ -548,7 +585,7 @@ export default function InvestigationAIPage() {
                         <span className="text-[12px] font-bold text-slate-800 truncate pr-3">
                           {job.fileName || `Job #${job.job_id}`}
                         </span>
-                        {job.status === "processing" ? (
+                        {job.status === "processing" || job.status === "queued" ? (
                           <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin flex-shrink-0" />
                         ) : job.status === "completed" ? (
                           <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[9px] font-bold uppercase tracking-wider flex-shrink-0">Done</span>
@@ -556,7 +593,7 @@ export default function InvestigationAIPage() {
                           <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-600 text-[9px] font-bold uppercase tracking-wider flex-shrink-0">Failed</span>
                         )}
                       </div>
-                      {job.status === "processing" && (
+                      {(job.status === "processing" || job.status === "queued") && (
                         <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                           <motion.div
                             initial={{ width: "0%" }}

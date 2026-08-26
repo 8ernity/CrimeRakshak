@@ -73,6 +73,7 @@ def seed() -> None:
             if role is None:
                 role = Role(role_name=name, description=desc)
                 db.add(role)
+                db.flush()
                 logger.info("Created role: %s", name)
             role.description = desc
             role.permissions = [perm_by_code[c] for c in codes]
