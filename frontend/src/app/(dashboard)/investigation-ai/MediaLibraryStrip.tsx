@@ -61,6 +61,7 @@ export function MediaLibraryStrip({
     <div className="overflow-x-auto scrollbar-hide -mx-1 px-1">
       <div className="flex gap-4 pb-2" style={{ minWidth: "max-content" }}>
         {mediaItems.map((item, index) => {
+        {mediaItems.map((item, idx) => {
           const isSelected = selectedMediaId === item.media_id;
           const statusCfg = STATUS_MAP[item.status] || STATUS_MAP.uploaded;
           const StatusIcon = statusCfg.icon;
@@ -69,6 +70,7 @@ export function MediaLibraryStrip({
           return (
             <motion.div
               key={`${item.media_id}-${index}`}
+              key={`${item.media_id}-${item.file_name}-${idx}`}
               whileHover={{ y: -4 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => onSelectMedia(item)}

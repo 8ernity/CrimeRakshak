@@ -29,26 +29,55 @@ async function performLogin() {
     }
   } catch (error) {
     console.error("Failed to auto-login:", error);
+declare global {
+  interface Window {
+    Clerk?: any;
   }
+}
+
+function getCookie(name: string) {
+  if (typeof window === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
   return null;
 }
 
-async function getToken() {
-  if (typeof window !== "undefined" && (window as any).Clerk?.session) {
-    try {
-      const clerkToken = await (window as any).Clerk.session.getToken();
-      if (clerkToken) return clerkToken;
-    } catch (error) {
-      console.warn("Failed to get Clerk token:", error);
+async function getToken(): Promise<string | null> {
+  // 1. Try Clerk session (primary method)
+  if (typeof window !== "undefined") {
+    // Wait up to 2s for Clerk to initialize if it's not ready yet
+    if (window.Clerk && !window.Clerk.session) {
+      await new Promise<void>((resolve) => {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          if (window.Clerk?.session || attempts > 20) {
+            clearInterval(interval);
+            resolve();
+          }
+          attempts++;
+        }, 100);
+      });
+    }
+    if (window.Clerk?.session) {
+      try {
+        const clerkToken = await window.Clerk.session.getToken();
+        if (clerkToken) return clerkToken;
+      } catch (e) {
+        console.warn("Failed to get Clerk token", e);
+      }
     }
   }
 
+  // 2. Try legacy cached token
   if (cachedToken) return cachedToken;
+  
   if (typeof window !== "undefined") {
-    cachedToken = localStorage.getItem("auth_token");
-    if (cachedToken) return cachedToken;
+    cachedToken = localStorage.getItem("auth_token") || getCookie("auth_token") || null;
+    return cachedToken;
   }
-  return performLogin();
+  
+  return null;
 }
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
@@ -71,28 +100,9 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
-  if (res.status === 401) {
-    // Clear invalid token
-    cachedToken = null;
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token");
-    }
-    
-    // Attempt re-login
-    token = await performLogin();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      res = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers,
-      });
-    }
-  }
-
   if (!res.ok) {
     throw new Error(`API Error: ${res.status} ${res.statusText}`);
   }
 
   return res.json();
 }
-

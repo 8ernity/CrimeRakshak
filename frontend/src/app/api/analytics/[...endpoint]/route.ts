@@ -62,15 +62,8 @@ export async function GET(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    let token: string | null = null;
-    try {
-      const authRes = await auth();
-      if (authRes?.getToken) {
-        token = await authRes.getToken();
-      }
-    } catch (e) {
-      // Clerk fallback
-    }
+    const { getToken } = await auth();
+    const token = await getToken();
 
     const params = await context.params;
     const path = params.endpoint.join("/");
@@ -112,15 +105,8 @@ export async function POST(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    let token: string | null = null;
-    try {
-      const authRes = await auth();
-      if (authRes?.getToken) {
-        token = await authRes.getToken();
-      }
-    } catch (e) {
-      // Clerk fallback
-    }
+    const { getToken } = await auth();
+    const token = await getToken();
 
     const params = await context.params;
     const path = params.endpoint.join("/");

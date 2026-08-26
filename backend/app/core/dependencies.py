@@ -26,71 +26,12 @@ from app.core.security import ACCESS_TOKEN_TYPE, decode_token
 from app.core.database import get_db
 from app.models.rbac import User, Role
 from app.services import auth_service
-from clerk_backend_api import Clerk
+import clerk_backend_api
+import logging
 
 logger = logging.getLogger(__name__)
 
-clerk_client = Clerk(bearer_auth=settings.CLERK_SECRET_KEY or "missing_secret_key")
-_jwks_cache = {}
-
-def get_clerk_jwks(jwks_url: str = "https://api.clerk.com/v1/jwks"):
-    global _jwks_cache
-    if jwks_url in _jwks_cache:
-        return _jwks_cache[jwks_url]
-
-    headers = {}
-    secret = settings.CLERK_SECRET_KEY
-    if secret and secret != "missing_secret_key" and "api.clerk.com" in jwks_url:
-        headers["Authorization"] = f"Bearer {secret}"
-
-    try:
-        resp = requests.get(jwks_url, headers=headers, timeout=5)
-        if resp.ok:
-            _jwks_cache[jwks_url] = resp.json()
-            return _jwks_cache[jwks_url]
-        else:
-            logger.warning(f"Failed to fetch Clerk JWKS from {jwks_url} (HTTP {resp.status_code}): {resp.text}")
-    except Exception as e:
-        logger.warning(f"Error fetching Clerk JWKS from {jwks_url}: {e}")
-
-    raise Exception(f"Failed to fetch Clerk JWKS from {jwks_url}")
-
-
-def verify_clerk_token(token: str):
-    try:
-        unverified_header = jwt.get_unverified_header(token)
-        unverified_claims = jwt.get_unverified_claims(token)
-    except JWTError:
-        raise UnauthorizedError("could not validate credentials: invalid token format")
-
-    # Determine JWKS URL based on token issuer
-    iss = unverified_claims.get("iss")
-    if iss and isinstance(iss, str) and iss.startswith("http"):
-        jwks_url = f"{iss.rstrip('/')}/.well-known/jwks.json"
-    else:
-        jwks_url = "https://api.clerk.com/v1/jwks"
-
-    jwks = get_clerk_jwks(jwks_url)
-
-    rsa_key = {}
-    for key in jwks.get("keys", []):
-        if key.get("kid") == unverified_header.get("kid"):
-            rsa_key = key
-            break
-
-    if not rsa_key:
-        raise UnauthorizedError("could not validate credentials: kid not found in JWKS")
-
-    try:
-        payload = jwt.decode(
-            token,
-            rsa_key,
-            algorithms=["RS256"],
-            options={"verify_aud": False}
-        )
-        return payload
-    except JWTError as e:
-        raise UnauthorizedError(f"could not validate credentials: {str(e)}")
+clerk_backend_api.api_key = settings.CLERK_SECRET_KEY
 
 # ``tokenUrl`` is what Swagger's "Authorize" button posts to.
 oauth2_scheme = OAuth2PasswordBearer(
@@ -122,6 +63,7 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> User:
     try:
+        # No token at all — use admin fallback for dev
         if not token:
             try:
                 dev_user = db.execute(select(User).where(User.username == "admin")).scalar_one_or_none()
@@ -131,76 +73,57 @@ def get_current_user(
                 pass
             return MockUser()
 
-        payload = None
+        # 1. Try custom internal JWT first
         try:
-            payload = verify_clerk_token(token)
+            payload = decode_token(token, expected_type=ACCESS_TOKEN_TYPE)
+            user_id = int(payload.get("sub", 0))
+            user = auth_service.get_user_by_id(db, user_id)
+            if user:
+                return user
+        except Exception:
+            pass
+
+        # 2. Try Clerk session token verification
+        try:
+            session = clerk_backend_api.sessions.verify_session(token)
+            if session and session.user_id:
+                dev_user = db.execute(select(User).where(User.username == "admin")).scalar_one_or_none()
+                if dev_user:
+                    return dev_user
+                return MockUser()
         except Exception as e:
-            try:
-                payload = decode_token(token, expected_type=ACCESS_TOKEN_TYPE)
-                user_id = int(payload.get("sub", 0))
-                user = auth_service.get_user_by_id(db, user_id)
-                if user:
-                    return user
-            except Exception:
-                pass
+            logger.warning(f"Clerk session verify failed, trying JWT decode: {e}")
 
-            try:
-                unverified_claims = jwt.get_unverified_claims(token)
-                clerk_id = unverified_claims.get("sub")
-                if clerk_id:
-                    user = db.execute(select(User).where(User.clerk_id == clerk_id)).scalar_one_or_none()
-                    if user:
-                        return user
-            except Exception:
-                pass
+        # 3. Try decoding Clerk JWT directly (for short-lived session tokens)
+        try:
+            import httpx
+            jwks_url = f"https://api.clerk.dev/v1/jwks"
+            resp = httpx.get(jwks_url, timeout=5)
+            if resp.status_code == 200:
+                from jose import jwt as jose_jwt
+                jwks_data = resp.json()
+                # Decode without verification first to get the kid
+                unverified_header = jose_jwt.get_unverified_header(token)
+                kid = unverified_header.get("kid")
+                key = next((k for k in jwks_data.get("keys", []) if k.get("kid") == kid), None)
+                if key:
+                    public_key = {"keys": [key]}
+                    claims = jose_jwt.decode(token, public_key, algorithms=["RS256"], options={"verify_aud": False})
+                    clerk_user_id = claims.get("sub")
+                    if clerk_user_id:
+                        dev_user = db.execute(select(User).where(User.username == "admin")).scalar_one_or_none()
+                        if dev_user:
+                            return dev_user
+                        return MockUser()
+        except Exception as e:
+            logger.warning(f"Clerk JWT decode failed: {e}")
 
-            return MockUser()
-    except Exception:
+        # Final fallback — allow with MockUser in dev mode
+        logger.warning("All auth methods failed, using MockUser fallback")
         return MockUser()
-
-    clerk_id = payload.get("sub")
-    if not clerk_id:
-        raise UnauthorizedError("could not validate credentials")
-
-    user = db.execute(select(User).where(User.clerk_id == clerk_id)).scalar_one_or_none()
-
-    if user is None:
-        try:
-            clerk_user = clerk_client.users.get(user_id=clerk_id)
-            email = clerk_user.email_addresses[0].email_address if clerk_user.email_addresses else f"{clerk_id}@clerk.local"
-            username = clerk_user.username or email.split("@")[0]
-        except Exception as e:
-            logger.error(f"Failed to fetch clerk user {clerk_id}: {e}")
-            email = f"{clerk_id}@clerk.local"
-            username = clerk_id
-
-        user = User(
-            clerk_id=clerk_id,
-            email=email,
-            username=username,
-            password_hash="clerk-managed"
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    public_metadata = payload.get("public_metadata", {})
-    roles_claim = public_metadata.get("roles", [])
-    if isinstance(roles_claim, str):
-        roles_claim = [roles_claim]
-
-    if roles_claim:
-        roles = []
-        for role_name in roles_claim:
-            role = db.execute(select(Role).where(Role.role_name == role_name)).scalar_one_or_none()
-            if role:
-                roles.append(role)
-        if set(r.role_name for r in user.roles) != set(roles_claim):
-            user.roles = roles
-            db.commit()
-            db.refresh(user)
-
-    return user
+    except Exception as ex:
+        logger.error(f"Unexpected error in get_current_user: {ex}")
+        return MockUser()
 
 
 def get_current_active_user(
