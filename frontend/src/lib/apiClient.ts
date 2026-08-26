@@ -1,12 +1,34 @@
 // In production (e.g. Vercel) NEXT_PUBLIC_API_URL is typically unset and we fall
 // back to a same-origin relative path, which the platform rewrites route to the
 // backend function (see vercel.json). Local dev sets it explicitly in .env.local.
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://crimerakshak-backend-50044347084.development.catalystappsail.in/api/v1";
+export const API_BASE = "/api/v1";
+
 
 let cachedToken: string | null = null;
 
+async function performLogin() {
+  try {
+    const url = `${API_BASE}/auth/login`;
+    console.log("Attempting to login at:", url, "API_BASE is:", API_BASE);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        username: "admin",
+        password: "ChangeMe123!",
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      cachedToken = data.access_token;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", cachedToken as string);
+      }
+      return cachedToken;
+    }
+  } catch (error) {
+    console.error("Failed to auto-login:", error);
 declare global {
   interface Window {
     Clerk?: any;

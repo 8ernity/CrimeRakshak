@@ -4,7 +4,7 @@
   "build_path": ".",
   "stack": "python3.11",
   "env_variables": {},
-  "memory": 1024,
+  "memory": 256,
   "ignore": [
     "venv",
     ".venv",

@@ -1,16 +1,16 @@
-# ── Deployment zips & bundled libraries ──
+# "?"? Deployment zips & bundled libraries "?"?
 *.zip
 backend/lib/
 frontend/.next/
 node_modules/
 
-# ── Deployment zips & bundled libraries ──
+# "?"? Deployment zips & bundled libraries "?"?
 *.zip
 backend/lib/
 frontend/.next/
 node_modules/
 
-# ── Environment variables (secrets) ──
+# "?"? Environment variables (secrets) "?"?
 .env
 backend/.env
 
@@ -21,37 +21,44 @@ backend/.env
 # Generated conversation PDFs
 backend/exports/
 
-# ── Virtual environments ──
+# "?"? Virtual environments "?"?
 .venv/
 venv/
 ENV/
 
-# ── Python cache ──
+# "?"? Python cache "?"?
 __pycache__/
 *.pyc
 *.pyo
 
-# ── Pytest cache ──
+# "?"? Pytest cache "?"?
 .pytest_cache/
 
-# ── Log files ──
+# "?"? Log files "?"?
 *.log
 backend/logs/
 
-# ── Temporary scripts ──
+# "?"? Temporary scripts "?"?
 test_pg.py
 
-# ── OS artifacts ──
+# "?"? OS artifacts "?"?
 .DS_Store
 Thumbs.db
 .vercel
 .env*
 
-# ── AI Model Weights & Storage Uploads ──
+# "?"? AI Model Weights & Storage Uploads "?"?
 *.pt
 *.pth
 *.onnx
 storage/
 backend/storage/
+
 backend/data/
 backend/models/
+
+# "?"? Miscellaneous "?"?
+zip_backend.py
+backend_deploy.zip
+backend/static/*.apk
+backend/cloudflared.exe

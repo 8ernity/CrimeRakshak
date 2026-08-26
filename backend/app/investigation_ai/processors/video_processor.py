@@ -2,7 +2,10 @@
 import logging
 import os
 from typing import Any, Callable, Dict, List, Optional
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 from app.core.config import settings
 from app.investigation_ai.processors.base import BaseMediaProcessor
