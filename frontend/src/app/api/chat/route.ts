@@ -239,9 +239,15 @@ PREVENTION:
 }
 
 export async function POST(req: Request) {
-  try {
-    const { getToken } = await auth();
-    let token = await getToken();
+    let token: string | null = null;
+    try {
+      const authObj = await auth();
+      if (authObj && typeof authObj.getToken === "function") {
+        token = await authObj.getToken();
+      }
+    } catch {
+      // safe fallback for local mode
+    }
 
     const { message, conversation_id, language } = await req.json();
     if (!message || typeof message !== "string") {

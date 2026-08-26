@@ -552,6 +552,51 @@ def get_crime_decision(
     )
 
 
+def get_crime_video_detection(
+    db: Session,
+    media_id: int,
+    user: User,
+) -> dict:
+    """Run CrimeDetectionAnalyzer over media's existing detections & events."""
+    from app.investigation_ai.processors.crime_detection_analyzer import CrimeDetectionAnalyzer
+
+    media = get_media_by_id(db, media_id)
+    detections_raw = get_media_detections(db, media_id)
+    events_raw = get_media_events(db, media_id)
+
+    dets_dict = []
+    for d in detections_raw:
+        dets_dict.append({
+            "frame_number": getattr(d, "frame_number", 0),
+            "timestamp_seconds": getattr(d, "timestamp_seconds", 0.0),
+            "object_class": getattr(d, "object_class", ""),
+            "tracking_id": getattr(d, "tracking_id", None),
+            "confidence": getattr(d, "confidence", 0.0),
+            "posture": getattr(d, "posture", None),
+        })
+
+    evts_dict = []
+    for e in events_raw:
+        evts_dict.append({
+            "event_type": getattr(e, "event_type", ""),
+            "description": getattr(e, "description", ""),
+            "timestamp_seconds": getattr(e, "start_timestamp_seconds", getattr(e, "timestamp_seconds", 0.0)),
+            "start_timestamp_seconds": getattr(e, "start_timestamp_seconds", 0.0),
+            "end_timestamp_seconds": getattr(e, "end_timestamp_seconds", 0.0),
+            "tracking_id": getattr(e, "tracking_id", None),
+            "confidence": getattr(e, "confidence", 0.0),
+        })
+
+    analyzer = CrimeDetectionAnalyzer()
+    return analyzer.analyze_video_evidence(
+        detections=dets_dict,
+        events=evts_dict,
+        is_video=(media.file_type == "video"),
+        media_id=media.media_id,
+    )
+
+
+
 def link_media_to_fir(
     db: Session,
     media_id: int,

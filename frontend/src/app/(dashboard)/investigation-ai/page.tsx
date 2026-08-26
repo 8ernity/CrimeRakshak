@@ -14,23 +14,26 @@ import { MediaMetadataPanel } from "./MediaMetadataPanel";
 import { MediaLibraryStrip } from "./MediaLibraryStrip";
 import { UploadEvidenceModal } from "./UploadEvidenceModal";
 import { ConfigureModal } from "./ConfigureModal";
-import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary } from "./types";
+import { CrimeDetectionPanel } from "./CrimeDetectionPanel";
+import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary, CrimeVideoDetection } from "./types";
 import {
   listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis, getSummary,
-  getMediaUrl, DEMO_VIDEO_SRC, getJobStatus,
+  getMediaUrl, DEMO_VIDEO_SRC, getJobStatus, getCrimeDetection,
 } from "@/lib/investigationApi";
 
 /* ═══════════════════════════════════════════════════════════════
  * RIGHT PANEL TABS
  * ═══════════════════════════════════════════════════════════════ */
-type RightTab = "timeline" | "tracks" | "summary" | "details";
+type RightTab = "detection" | "timeline" | "tracks" | "summary" | "details";
 
 const TAB_CONFIG: { id: RightTab; label: string; icon: React.ElementType }[] = [
+  { id: "detection", label: "Crime Evidence", icon: Shield },
   { id: "timeline", label: "Timeline", icon: Activity },
   { id: "tracks", label: "Tracks", icon: Crosshair },
   { id: "summary", label: "LLM Summary", icon: Sparkles },
-  { id: "details", label: "Details", icon: Shield },
+  { id: "details", label: "Details", icon: Settings },
 ];
+
 
 /* ═══════════════════════════════════════════════════════════════
  * MAIN PAGE COMPONENT
@@ -46,11 +49,13 @@ export default function InvestigationAIPage() {
   const [detections, setDetections] = useState<Detection[]>([]);
   const [events, setEvents] = useState<InvestigationEvent[]>([]);
   const [summaryData, setSummaryData] = useState<InvestigationSummary | null>(null);
+  const [crimeDetection, setCrimeDetection] = useState<CrimeVideoDetection | null>(null);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
   const [activeJobs, setActiveJobs] = useState<(AnalysisJob & { fileName?: string })[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [highlightedTrackId, setHighlightedTrackId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<RightTab>("timeline");
+  const [activeTab, setActiveTab] = useState<RightTab>("detection");
+
   const [backendLive, setBackendLive] = useState<boolean | null>(null);
 
   const [firFilter, setFirFilter] = useState<string>("");
@@ -107,6 +112,7 @@ export default function InvestigationAIPage() {
     setDetections([]);
     setEvents([]);
     setSummaryData(null);
+    setCrimeDetection(null);
     setHighlightedTrackId(null);
 
     if (!selectedMedia) return;
@@ -125,6 +131,13 @@ export default function InvestigationAIPage() {
         setEvents(res.events || []);
       }
     });
+
+    getCrimeDetection(mId).then((res) => {
+      if (!isCancelled) {
+        setCrimeDetection(res);
+      }
+    });
+
 
     setIsGeneratingSummary(true);
     getSummary(mId)
@@ -411,6 +424,14 @@ export default function InvestigationAIPage() {
               {/* Tab Content */}
               <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
+                  {activeTab === "detection" && (
+                    <motion.div key="detection" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full p-4 overflow-y-auto">
+                      <CrimeDetectionPanel
+                        detection={crimeDetection}
+                        onSeek={handleJumpToTimestamp}
+                      />
+                    </motion.div>
+                  )}
                   {activeTab === "timeline" && (
                     <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full">
                       <InteractiveTimeline events={events} onJumpToTimestamp={handleJumpToTimestamp} />

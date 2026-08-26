@@ -14,6 +14,7 @@ from app.investigation_ai.schemas import (
     AnalysisJobResponse,
     CaseMediaSummaryResponse,
     CrimeDecisionResponse,
+    CrimeVideoDetectionResponse,
     DetectionListResponse,
     EventListResponse,
     GenerateSummaryRequest,
@@ -507,6 +508,21 @@ def generate_investigation_summary(
         force_refresh=force_ref,
         ip_address=get_client_ip(request),
     )
+
+
+@router.get(
+    "/media/{media_id}/crime-detection",
+    response_model=CrimeVideoDetectionResponse,
+    summary="Get Crime Video Detection decision layer analysis for evidence media",
+)
+def get_crime_video_detection(
+    media_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> CrimeVideoDetectionResponse:
+    res = services.get_crime_video_detection(db=db, media_id=media_id, user=current_user)
+    return CrimeVideoDetectionResponse(**res)
+
 
 
 

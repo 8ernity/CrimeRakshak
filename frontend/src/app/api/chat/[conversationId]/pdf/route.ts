@@ -11,8 +11,15 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
-  const { getToken } = await auth();
-  const token = await getToken();
+  let token: string | null = null;
+  try {
+    const authObj = await auth();
+    if (authObj && typeof authObj.getToken === "function") {
+      token = await authObj.getToken();
+    }
+  } catch {
+    // safe fallback
+  }
 
   const { conversationId } = await params;
   try {

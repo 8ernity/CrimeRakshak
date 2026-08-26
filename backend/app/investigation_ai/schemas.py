@@ -155,6 +155,20 @@ class CrimeDecisionResponse(BaseModel):
         from_attributes = True
 
 
+class TimestampRange(BaseModel):
+    start: float
+    end: float
+
+
+class CrimeVideoDetectionResponse(BaseModel):
+    classification: str  # 'possible_crime' or 'no_clear_crime_evidence'
+    confidence: float
+    crime_indicators: List[str] = Field(default_factory=list)
+    relevant_timestamps: List[TimestampRange] = Field(default_factory=list)
+    evidence_events: List[dict] = Field(default_factory=list)
+
+
+
 # ── Image & Video Analysis Direct Responses ──
 
 class ImageAnalysisResponse(BaseModel):

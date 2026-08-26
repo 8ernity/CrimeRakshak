@@ -112,3 +112,17 @@ export interface InvestigationSummary {
   created_at: string;
 }
 
+export interface TimestampRange {
+  start: number;
+  end: number;
+}
+
+export interface CrimeVideoDetection {
+  classification: "possible_crime" | "no_clear_crime_evidence";
+  confidence: number;
+  crime_indicators: string[];
+  relevant_timestamps: TimestampRange[];
+  evidence_events: any[];
+}
+
+

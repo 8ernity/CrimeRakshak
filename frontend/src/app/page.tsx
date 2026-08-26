@@ -18,10 +18,13 @@ import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
 export default async function LandingPage() {
-  const { userId } = await auth();
-
-  if (userId) {
-    redirect('/overview');
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      redirect('/overview');
+    }
+  } catch {
+    // safe fallback
   }
 
   return (

@@ -62,8 +62,15 @@ export async function GET(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    const { getToken } = await auth();
-    const token = await getToken();
+    let token: string | null = null;
+    try {
+      const authObj = await auth();
+      if (authObj && typeof authObj.getToken === "function") {
+        token = await authObj.getToken();
+      }
+    } catch {
+      // safe fallback
+    }
 
     const params = await context.params;
     const path = params.endpoint.join("/");
@@ -105,8 +112,15 @@ export async function POST(
   context: { params: Promise<{ endpoint: string[] }> }
 ) {
   try {
-    const { getToken } = await auth();
-    const token = await getToken();
+    let token: string | null = null;
+    try {
+      const authObj = await auth();
+      if (authObj && typeof authObj.getToken === "function") {
+        token = await authObj.getToken();
+      }
+    } catch {
+      // safe fallback
+    }
 
     const params = await context.params;
     const path = params.endpoint.join("/");
