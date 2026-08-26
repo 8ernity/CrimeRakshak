@@ -6,6 +6,7 @@ export const API_BASE = "/api/v1";
 
 let cachedToken: string | null = null;
 
+
 declare global {
   interface Window {
     Clerk?: any;
