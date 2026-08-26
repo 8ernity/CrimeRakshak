@@ -23,6 +23,7 @@ from app.graph.routers import graph as graph_router
 from app.chat.router import router as chat_router
 from app.investigation_ai.router import router as investigation_router
 from app.routers import admin, analytics, auth, network, predict, protected
+from app.sentinel.router import router as sentinel_router, ws_router as sentinel_ws_router
 
 logger = get_logger("api")
 
@@ -57,13 +58,14 @@ async def app_http_exception_handler(request: Request, exc: AppHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    from fastapi.encoders import jsonable_encoder
     return JSONResponse(
         status_code=422,
         content={
             "error": {
                 "code": "validation_error",
                 "message": "request validation failed",
-                "details": exc.errors(),
+                "details": jsonable_encoder(exc.errors()),
             }
         },
     )
@@ -80,6 +82,8 @@ app.include_router(analytics.router, prefix=settings.API_V1_PREFIX)
 app.include_router(network.router, prefix=settings.API_V1_PREFIX)
 app.include_router(predict.router, prefix=settings.API_V1_PREFIX)
 app.include_router(investigation_router, prefix=settings.API_V1_PREFIX)
+app.include_router(sentinel_router, prefix=settings.API_V1_PREFIX)
+app.include_router(sentinel_ws_router)  # WebSocket — no API prefix
 
 
 
@@ -87,6 +91,15 @@ app.include_router(investigation_router, prefix=settings.API_V1_PREFIX)
 @app.on_event("startup")
 def _startup_seed() -> None:
     """Seed the database with default roles, permissions, and the superuser on startup."""
+    # ── Create sentinel_events table if it doesn't exist yet ────────────
+    try:
+        from app.core.database import engine
+        from app.sentinel.models import SensorEvent  # noqa: F401 — registers with Base
+        from app.core.database import Base
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        logger.info("Sentinel sensor_events table ensured.")
+    except Exception as e:
+        logger.error("Failed to create sentinel tables: %s", e)
     from app.seed import seed
     try:
         logger.info("Running automatic DB seeding on startup...")
@@ -110,12 +123,21 @@ def _startup_seed() -> None:
     except Exception as e:
         logger.error(f"Failed to build DuckDB dataset: {e}")
 
+    # ── Start the sensor event simulator ────────────────────────────────
+    try:
+        from app.sentinel.simulator import start_simulator
+        start_simulator()
+    except Exception as e:
+        logger.error("Failed to start sentinel simulator: %s", e)
+
 
 @app.on_event("shutdown")
 def _shutdown_graph() -> None:
-    """Close the shared Neo4j driver cleanly on application shutdown."""
+    """Close the shared Neo4j driver and sentinel simulator on application shutdown."""
     from app.graph.connection import graph_connection
+    from app.sentinel.simulator import stop_simulator
 
+    stop_simulator()
     graph_connection.close()
 
 

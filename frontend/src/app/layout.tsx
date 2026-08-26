@@ -1,9 +1,9 @@
-import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono, Dancing_Script, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/components/LanguageContext";
+import { ClerkProvider } from '@clerk/nextjs'
 
 const inter = Inter({
   variable: "--font-inter",
@@ -59,8 +59,8 @@ export default function RootLayout({
         className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${dancingScript.variable} ${playfairDisplay.variable} h-full antialiased`}
         suppressHydrationWarning
       >
+      <ClerkProvider>
       <body className="min-h-full bg-background text-foreground">
-        <ClerkProvider>
           <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -72,8 +72,8 @@ export default function RootLayout({
           {children}
           </LanguageProvider>
           </ThemeProvider>
-        </ClerkProvider>
       </body>
+      </ClerkProvider>
     </html>
   );
 }

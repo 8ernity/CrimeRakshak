@@ -10,7 +10,6 @@ import { useLanguage } from "@/components/LanguageContext";
 import { speak, stopSpeaking, listen, isSpeechRecognitionSupported } from "@/lib/voice";
 import * as motion from "motion/react-client";
 import { Send, Sparkles, Bot, User, Volume2, Square, Mic, FileDown, Building2, Plus, Trash2, MessageSquare } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 
 const GREETING =
   "Hello! I'm the CrimeRakshak AI Copilot & Decision Support system. Ask me about Karnataka crime data — trends, rankings, district reviews — or open Decision Support for a district briefing.";
@@ -44,8 +43,8 @@ export default function AIAssistantPage() {
   const [chatLang, setChatLang] = useState<"en" | "kn">(lang === "KA" ? "kn" : "en");
   const voiceLang = chatLang;
 
-  const { user, isLoaded } = useUser();
-  const storageKey = `crimerakshak_chat_sessions_${user?.id || 'guest'}`;
+  const isLoaded = true;
+  const storageKey = `crimerakshak_chat_sessions_guest`;
 
   // Session history state
   const [sessions, setSessions] = useState<ChatSession[]>([]);
