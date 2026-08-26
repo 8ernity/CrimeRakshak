@@ -125,4 +125,54 @@ export interface CrimeVideoDetection {
   evidence_events: any[];
 }
 
+export interface EvidenceObservation {
+  observation: string;
+  source: "directly_observed" | "ai_inference" | "uncertain";
+  confidence: number;
+  timestamp_seconds: number | null;
+  tracking_id: number | null;
+}
 
+export interface DetectedEntity {
+  entity_type: "person" | "vehicle" | "weapon" | "object";
+  description: string;
+  tracking_id: number | null;
+  first_seen_seconds: number | null;
+  last_seen_seconds: number | null;
+  confidence: number;
+}
+
+export interface TimelineEntry {
+  timestamp_seconds: number;
+  description: string;
+  source: "directly_observed" | "ai_inference" | "uncertain";
+  significance: "critical" | "notable" | "routine";
+}
+
+export interface EvidenceFrameRef {
+  frame_index: number;
+  timestamp_seconds: number;
+  description: string;
+  relevant_observations: string[];
+}
+
+export interface AIInvestigationReport {
+  media_id: number;
+  report_id: number | null;
+  incident_classification: string;
+  confidence: number;
+  executive_summary: string;
+  observed_evidence: EvidenceObservation[];
+  detected_objects: string[];
+  detected_persons_vehicles: DetectedEntity[];
+  chronological_timeline: TimelineEntry[];
+  relevant_timestamps: TimestampRange[];
+  evidence_frame_references: EvidenceFrameRef[];
+  crime_indicators: string[];
+  uncertainty_notes: string[];
+  limitations: string[];
+  provider_used: string;
+  frames_supplied_to_model: number;
+  fallback_reason?: string | null;
+  created_at: string | null;
+}

@@ -15,19 +15,21 @@ import { MediaLibraryStrip } from "./MediaLibraryStrip";
 import { UploadEvidenceModal } from "./UploadEvidenceModal";
 import { ConfigureModal } from "./ConfigureModal";
 import { CrimeDetectionPanel } from "./CrimeDetectionPanel";
-import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary, CrimeVideoDetection } from "./types";
+import { AIReportPanel } from "./AIReportPanel";
+import type { InvestigationMedia, Detection, InvestigationEvent, AnalysisJob, InvestigationSummary, CrimeVideoDetection, AIInvestigationReport } from "./types";
 import {
   listMedia, getDetections, getEvents, isBackendLive, triggerAnalysis, getSummary,
-  getMediaUrl, DEMO_VIDEO_SRC, getJobStatus, getCrimeDetection,
+  getMediaUrl, DEMO_VIDEO_SRC, getJobStatus, getCrimeDetection, getAIReport, generateAIReport,
 } from "@/lib/investigationApi";
 
 /* ═══════════════════════════════════════════════════════════════
  * RIGHT PANEL TABS
  * ═══════════════════════════════════════════════════════════════ */
-type RightTab = "detection" | "timeline" | "tracks" | "summary" | "details";
+type RightTab = "detection" | "report" | "timeline" | "tracks" | "summary" | "details";
 
 const TAB_CONFIG: { id: RightTab; label: string; icon: React.ElementType }[] = [
   { id: "detection", label: "Crime Evidence", icon: Shield },
+  { id: "report", label: "AI Report", icon: FileText },
   { id: "timeline", label: "Timeline", icon: Activity },
   { id: "tracks", label: "Tracks", icon: Crosshair },
   { id: "summary", label: "LLM Summary", icon: Sparkles },
@@ -50,6 +52,8 @@ export default function InvestigationAIPage() {
   const [events, setEvents] = useState<InvestigationEvent[]>([]);
   const [summaryData, setSummaryData] = useState<InvestigationSummary | null>(null);
   const [crimeDetection, setCrimeDetection] = useState<CrimeVideoDetection | null>(null);
+  const [aiReport, setAiReport] = useState<AIInvestigationReport | null>(null);
+  const [isReportLoading, setIsReportLoading] = useState<boolean>(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
   const [activeJobs, setActiveJobs] = useState<(AnalysisJob & { fileName?: string })[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
@@ -113,6 +117,7 @@ export default function InvestigationAIPage() {
     setEvents([]);
     setSummaryData(null);
     setCrimeDetection(null);
+    setAiReport(null);
     setHighlightedTrackId(null);
 
     if (!selectedMedia) return;
@@ -136,6 +141,15 @@ export default function InvestigationAIPage() {
       if (!isCancelled) {
         setCrimeDetection(res);
       }
+    });
+
+    setIsReportLoading(true);
+    getAIReport(mId).then((res) => {
+      if (!isCancelled) {
+        setAiReport(res);
+      }
+    }).finally(() => {
+      if (!isCancelled) setIsReportLoading(false);
     });
 
 
@@ -429,6 +443,21 @@ export default function InvestigationAIPage() {
                       <CrimeDetectionPanel
                         detection={crimeDetection}
                         onSeek={handleJumpToTimestamp}
+                      />
+                    </motion.div>
+                  )}
+                  {activeTab === "report" && (
+                    <motion.div key="report" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full p-4 overflow-y-auto">
+                      <AIReportPanel
+                        report={aiReport}
+                        isLoading={isReportLoading}
+                        onSeek={handleJumpToTimestamp}
+                        onRefresh={selectedMedia ? () => {
+                          setIsReportLoading(true);
+                          generateAIReport(selectedMedia.media_id).then((res) => {
+                            setAiReport(res);
+                          }).finally(() => setIsReportLoading(false));
+                        } : undefined}
                       />
                     </motion.div>
                   )}

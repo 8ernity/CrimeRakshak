@@ -954,4 +954,73 @@ def get_investigation_summary(
     )
 
 
+def get_ai_investigation_report(
+    db: Session,
+    media_id: int,
+    user: User,
+    force_refresh: bool = False,
+    ip_address: Optional[str] = None,
+) -> dict:
+    """Generate or retrieve an AI Investigation Report for evidence media.
 
+    Orchestrates:
+      1. Structured evidence gathering (reuses summary_generator.build_structured_evidence)
+      2. Crime detection analysis (reuses CrimeDetectionAnalyzer)
+      3. Key frame extraction + multimodal LLM report generation
+    """
+    from app.investigation_ai.summary_generator import build_structured_evidence
+    from app.investigation_ai.processors.crime_detection_analyzer import CrimeDetectionAnalyzer
+    from app.investigation_ai.processors.report_generator import generate_ai_investigation_report
+
+    media = get_media_by_id(db, media_id)
+    is_video = media.file_type == "video"
+
+    # 1. Build structured evidence (same as summary generator)
+    structured_evidence = build_structured_evidence(db, media, user)
+
+    # 2. Run crime detection analyzer
+    dets_raw = get_media_detections(db, media_id)
+    evts_raw = get_media_events(db, media_id)
+
+    dets_dict = []
+    for d in dets_raw:
+        dets_dict.append({
+            "frame_number": getattr(d, "frame_number", 0),
+            "timestamp_seconds": getattr(d, "timestamp_seconds", 0.0),
+            "object_class": getattr(d, "object_class", ""),
+            "tracking_id": getattr(d, "tracking_id", None),
+            "confidence": getattr(d, "confidence", 0.0),
+            "posture": getattr(d, "posture", None),
+        })
+
+    evts_dict = []
+    for e in evts_raw:
+        evts_dict.append({
+            "event_type": getattr(e, "event_type", ""),
+            "description": getattr(e, "description", ""),
+            "timestamp_seconds": getattr(e, "start_timestamp_seconds", getattr(e, "timestamp_seconds", 0.0)),
+            "start_timestamp_seconds": getattr(e, "start_timestamp_seconds", 0.0),
+            "end_timestamp_seconds": getattr(e, "end_timestamp_seconds", 0.0),
+            "tracking_id": getattr(e, "tracking_id", None),
+            "confidence": getattr(e, "confidence", 0.0),
+        })
+
+    analyzer = CrimeDetectionAnalyzer()
+    crime_detection = analyzer.analyze_video_evidence(
+        detections=dets_dict,
+        events=evts_dict,
+        is_video=is_video,
+        media_id=media.media_id,
+    )
+
+    # 3. Generate AI Investigation Report
+    report = generate_ai_investigation_report(
+        structured_evidence=structured_evidence,
+        crime_detection=crime_detection,
+        media_file_path=media.file_path if hasattr(media, "file_path") else None,
+        is_video=is_video,
+        media_id=media.media_id,
+    )
+
+    report["media_id"] = media.media_id
+    return report

@@ -11,6 +11,7 @@ from app.core.exceptions import AppHTTPException
 from app.models.rbac import User
 from app.investigation_ai import services
 from app.investigation_ai.schemas import (
+    AIInvestigationReportResponse,
     AnalysisJobResponse,
     CaseMediaSummaryResponse,
     CrimeDecisionResponse,
@@ -524,5 +525,36 @@ def get_crime_video_detection(
     return CrimeVideoDetectionResponse(**res)
 
 
+@router.get(
+    "/media/{media_id}/ai-report",
+    response_model=AIInvestigationReportResponse,
+    summary="Get AI Investigation Report for evidence media item",
+)
+def get_ai_investigation_report(
+    media_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> AIInvestigationReportResponse:
+    report = services.get_ai_investigation_report(
+        db=db, media_id=media_id, user=current_user, ip_address=get_client_ip(request),
+    )
+    return AIInvestigationReportResponse(**report)
 
 
+@router.post(
+    "/media/{media_id}/ai-report",
+    response_model=AIInvestigationReportResponse,
+    summary="Generate or refresh AI Investigation Report for evidence media item",
+)
+def generate_ai_investigation_report(
+    media_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+) -> AIInvestigationReportResponse:
+    report = services.get_ai_investigation_report(
+        db=db, media_id=media_id, user=current_user,
+        force_refresh=True, ip_address=get_client_ip(request),
+    )
+    return AIInvestigationReportResponse(**report)

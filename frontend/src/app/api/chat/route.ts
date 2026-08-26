@@ -239,6 +239,7 @@ PREVENTION:
 }
 
 export async function POST(req: Request) {
+  try {
     let token: string | null = null;
     try {
       const authObj = await auth();

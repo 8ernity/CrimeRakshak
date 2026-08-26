@@ -425,9 +425,28 @@ export async function getCrimeDetection(mediaId: number) {
   }
 }
 
+export async function getAIReport(mediaId: number) {
+  try {
+    return await fetchAPI(`/investigation/media/${mediaId}/ai-report`);
+  } catch {
+    return null;
+  }
+}
+
+export async function generateAIReport(mediaId: number) {
+  try {
+    return await fetchAPI(`/investigation/media/${mediaId}/ai-report`, {
+      method: "POST",
+    });
+  } catch {
+    return null;
+  }
+}
+
 
 /** Public demo video URL for offline mode */
 export const DEMO_VIDEO_SRC = DEMO_VIDEO_URL;
+
 
 export function getMediaUrl(media: InvestigationMedia | null): string {
   if (!media) return DEMO_VIDEO_URL;

@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     LLM_SUMMARY_MODEL: str = "gemini-flash-lite-latest"
     # Cap on output tokens per call (keeps cost bounded on metered accounts).
     LLM_MAX_TOKENS: int = 1024
+    # Model used for multimodal AI Investigation Report generation (vision-capable).
+    LLM_REPORT_MODEL: str = "gemini-3.6-flash"
+    LLM_REPORT_MAX_TOKENS: int = 4096
 
     # ── CSV analytics (DuckDB) ──
     # Directory holding the KSP CSV datasets and the on-disk DuckDB file.

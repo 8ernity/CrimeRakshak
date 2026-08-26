@@ -224,3 +224,55 @@ class SummaryResponse(BaseModel):
 
 
 
+# ── AI Investigation Report ──
+
+class EvidenceObservation(BaseModel):
+    observation: str
+    source: str = "directly_observed"  # "directly_observed" | "ai_inference" | "uncertain"
+    confidence: float = 0.5
+    timestamp_seconds: Optional[float] = None
+    tracking_id: Optional[int] = None
+
+
+class DetectedEntity(BaseModel):
+    entity_type: str = "object"  # "person" | "vehicle" | "weapon" | "object"
+    description: str = ""
+    tracking_id: Optional[int] = None
+    first_seen_seconds: Optional[float] = None
+    last_seen_seconds: Optional[float] = None
+    confidence: float = 0.5
+
+
+class TimelineEntry(BaseModel):
+    timestamp_seconds: float = 0.0
+    description: str = ""
+    source: str = "directly_observed"
+    significance: str = "routine"  # "critical" | "notable" | "routine"
+
+
+class EvidenceFrameRef(BaseModel):
+    frame_index: int = 0
+    timestamp_seconds: float = 0.0
+    description: str = ""
+    relevant_observations: List[str] = Field(default_factory=list)
+
+
+class AIInvestigationReportResponse(BaseModel):
+    media_id: int = 0
+    report_id: Optional[int] = None
+    incident_classification: str = "Insufficient Evidence for Classification"
+    confidence: float = 0.5
+    executive_summary: str = ""
+    observed_evidence: List[EvidenceObservation] = Field(default_factory=list)
+    detected_objects: List[str] = Field(default_factory=list)
+    detected_persons_vehicles: List[DetectedEntity] = Field(default_factory=list)
+    chronological_timeline: List[TimelineEntry] = Field(default_factory=list)
+    relevant_timestamps: List[TimestampRange] = Field(default_factory=list)
+    evidence_frame_references: List[EvidenceFrameRef] = Field(default_factory=list)
+    crime_indicators: List[str] = Field(default_factory=list)
+    uncertainty_notes: List[str] = Field(default_factory=list)
+    limitations: List[str] = Field(default_factory=list)
+    provider_used: str = "gemini_vision"
+    frames_supplied_to_model: int = 0
+    fallback_reason: Optional[str] = None
+    created_at: Optional[str] = None
