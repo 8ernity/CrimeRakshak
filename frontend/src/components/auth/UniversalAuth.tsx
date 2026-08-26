@@ -2,13 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { SignIn, SignUp } from "@clerk/nextjs";
 import "@/app/auth.css";
-
-// ── Input recipe (shared across all fields) ──
-const inputClass =
-  "w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#2563EB] transition-colors";
 
 interface UniversalAuthProps {
   defaultIsSignUp?: boolean;
@@ -20,42 +15,6 @@ export default function UniversalAuth({
   const pathname = usePathname();
   const [isSignUp, setIsSignUp] = useState(defaultIsSignUp);
 
-  // ── Login state ──
-  const [identifier, setIdentifier] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState("");
-
-  // ── Signup state ──
-  const [formData, setFormData] = useState({
-    displayName: "",
-    email: "",
-    phone: "",
-    department: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] =
-    useState(false);
-  const [signupLoading, setSignupLoading] = useState(false);
-  const [signupError, setSignupError] = useState("");
-
-  // ── Slow-network UX (5s timeout → stage 2) ──
-  const [showLongLoading, setShowLongLoading] = useState(false);
-  useEffect(() => {
-    let t: NodeJS.Timeout;
-    if (loginLoading || signupLoading) {
-      t = setTimeout(() => setShowLongLoading(true), 5000);
-    }
-    return () => {
-      clearTimeout(t);
-      setShowLongLoading(false);
-    };
-  }, [loginLoading, signupLoading]);
-
-  // ── URL ↔ panel sync ──
   useEffect(() => {
     if (isSignUp !== (pathname === "/signup")) {
       setIsSignUp(pathname === "/signup");
@@ -67,175 +26,18 @@ export default function UniversalAuth({
     window.history.pushState(null, "", toSignUp ? "/signup" : "/login");
   };
 
-  // ── Form helpers ──
-  const updateFormData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  // ── Submit: Login ──
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginLoading(true);
-    setLoginError("");
-    // Simulate a brief loading state then redirect
-    setTimeout(() => {
-      window.location.href = "/overview";
-    }, 800);
-  };
-
-  // ── Submit: Signup ──
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSignupLoading(true);
-    setSignupError("");
-
-    if (formData.password !== formData.confirmPassword) {
-      setSignupError("Passwords do not match");
-      setSignupLoading(false);
-      return;
-    }
-
-    // Simulate a brief loading state then redirect
-    setTimeout(() => {
-      window.location.href = "/overview";
-    }, 800);
-  };
-
   return (
     <div className="auth-page-bg auth-mesh-bg relative">
-      {/* ═══════════════════════════════════════════
-          Loading Overlay — Stage 1 (instant spinner)
-          ═══════════════════════════════════════════ */}
-      {(loginLoading || signupLoading) && !showLongLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all">
-          <div className="relative flex flex-col items-center justify-center">
-            <div className="relative flex items-center justify-center w-32 h-32 mb-8">
-              <div className="absolute inset-0 rounded-full border-4 border-[#2563EB]/20 border-t-[#2563EB] animate-spin drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
-              <div className="absolute inset-4 rounded-full border-4 border-purple-500/20 border-b-purple-500 animate-[spin_1.5s_linear_reverse_infinite] drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="font-extrabold text-white text-lg tracking-[0.2em] uppercase animate-pulse">
-                {loginLoading ? "Authenticating" : "Initializing"}
-              </span>
-              <div className="flex gap-1.5 mt-3">
-                <span
-                  className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════
-          Loading Overlay — Stage 2 ("taking a while")
-          ═══════════════════════════════════════════ */}
-      {showLongLoading && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 transition-all">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col p-6 animate-in zoom-in-95 duration-200 border-t-4 border-[#2563EB]">
-            <div className="flex flex-col items-center text-center gap-4">
-              <Loader2
-                size={40}
-                className="animate-spin text-[#2563EB] shrink-0"
-              />
-              <div>
-                <p className="font-bold text-lg text-slate-800">
-                  Please wait...
-                </p>
-                <p className="text-sm mt-1 text-slate-600">
-                  This is taking longer than usual. Hang tight!
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════
-          The Card
-          ═══════════════════════════════════════════ */}
       <div className="auth-wrapper">
         <div
           className={`auth-container ${isSignUp ? "right-panel-active" : ""}`}
         >
-          {/* ─── Sign Up Form (DOM-first) ─── */}
+          {/* ─── Sign Up Form ─── */}
           <div className="auth-form-container sign-up-container">
-            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4 px-6">
-              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
-                <SignUp appearance={{
-                  elements: {
-                    footerAction: "hidden",
-                    card: "shadow-none bg-transparent w-full"
-                  }
-                }} routing="hash" fallbackRedirectUrl="/overview" />
-              ) : (
-                <form onSubmit={handleSignup} className="w-full space-y-3">
-                  <h3 className="text-2xl font-bold text-slate-800 text-center mb-2">Create Account</h3>
-                  <div>
-                    <input
-                      name="displayName"
-                      type="text"
-                      placeholder="Officer Full Name"
-                      value={formData.displayName}
-                      onChange={updateFormData}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <input
-                      name="email"
-                      type="email"
-                      placeholder="Official Email (police.gov.in)"
-                      value={formData.email}
-                      onChange={updateFormData}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <input
-                      name="password"
-                      type="password"
-                      placeholder="Password"
-                      value={formData.password}
-                      onChange={updateFormData}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <input
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="Confirm Password"
-                      value={formData.confirmPassword}
-                      onChange={updateFormData}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                  {signupError && <p className="text-xs text-red-500 text-center">{signupError}</p>}
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl bg-[#2563EB] py-3 font-semibold text-white hover:bg-blue-700 transition-colors shadow-md"
-                  >
-                    Sign Up
-                  </button>
-                </form>
-              )}
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto px-6 py-6">
+              <SignUp routing="hash" />
               
-              {/* Mobile-only switch link */}
-              <div className="mt-4 text-center md:hidden pb-10">
+              <div className="mt-6 text-center md:hidden pb-10">
                 <button
                   type="button"
                   onClick={() => togglePanel(false)}
@@ -248,64 +50,18 @@ export default function UniversalAuth({
             </div>
           </div>
 
-          {/* ─── Sign In Form (DOM-second) ─── */}
+          {/* ─── Sign In Form ─── */}
           <div className="auth-form-container sign-in-container">
-            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center h-full space-y-4 px-6">
-              {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
-                <SignIn appearance={{
-                  elements: {
-                    footerAction: "hidden",
-                    card: "shadow-none bg-transparent w-full"
-                  }
-                }} routing="hash" fallbackRedirectUrl="/overview" />
-              ) : (
-                <form onSubmit={handleLogin} className="w-full space-y-4">
-                  <h3 className="text-2xl font-bold text-slate-800 text-center mb-2">Sign In</h3>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Badge ID / Official Email"
-                      value={identifier}
-                      onChange={(e) => setIdentifier(e.target.value)}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showLoginPassword ? "text" : "password"}
-                      placeholder="Password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className={inputClass}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
-                    >
-                      {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  {loginError && <p className="text-xs text-red-500 text-center">{loginError}</p>}
-                  <button
-                    type="submit"
-                    className="w-full rounded-xl bg-[#2563EB] py-3 font-semibold text-white hover:bg-blue-700 transition-colors shadow-md"
-                  >
-                    Sign In
-                  </button>
-                </form>
-              )}
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto px-6 py-6">
+              <SignIn routing="hash" />
               
-              {/* Mobile-only switch link */}
-              <div className="mt-4 text-center md:hidden pb-10">
+              <div className="mt-6 text-center md:hidden pb-10">
                 <button
                   type="button"
                   onClick={() => togglePanel(true)}
                   className="text-sm text-gray-500"
                 >
-                  Don&apos;t have an account?{" "}
+                  Don't have an account?{" "}
                   <span className="text-[#2563EB] font-medium">Sign Up</span>
                 </button>
               </div>

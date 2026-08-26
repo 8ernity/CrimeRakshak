@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUser, SignOutButton, UserButton } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import {
   Shield,
   LayoutDashboard,
@@ -92,15 +92,17 @@ export function Sidebar() {
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
   const { t } = useLanguage();
   const { user } = useUser();
+  const { signOut } = useClerk();
 
-  const name = user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || "User";
+  const name = user?.fullName || user?.firstName || user?.username || "Officer";
   let displayName = name;
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    displayName = `${parts[0][0].toUpperCase()}.${parts[parts.length - 1][0].toUpperCase()}`;
-  }
   const initials = name.substring(0, 2).toUpperCase();
-  const role = (user?.publicMetadata?.role as string) || "Investigator";
+  const role = "Investigator";
+  
+  const handleLogout = async () => {
+    await signOut();
+    window.location.href = '/';
+  };
 
   return (
     <>
@@ -211,9 +213,7 @@ export function Sidebar() {
         <div className="p-4 mt-auto">
           <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex-shrink-0">
-                <UserButton appearance={{ elements: { userButtonAvatarBox: "h-10 w-10 shadow-sm border-2 border-background" } }} />
-              </div>
+              <div className="h-10 w-10 shadow-sm border-2 border-background rounded-full bg-brand-purple flex items-center justify-center text-white font-bold">{initials}</div>
               {!collapsed && (
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-black dark:text-white truncate">{displayName}</p>
@@ -226,11 +226,9 @@ export function Sidebar() {
                 <Link href="/settings" title={t("Settings")} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors">
                   <Settings className="h-4 w-4" />
                 </Link>
-                <SignOutButton redirectUrl="/">
-                  <button suppressHydrationWarning title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </SignOutButton>
+                <button onClick={handleLogout} suppressHydrationWarning title={t("Log Out")} className="p-2 rounded-xl hover:bg-brand-red/10 text-muted-foreground hover:text-brand-red transition-colors">
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             )}
           </div>

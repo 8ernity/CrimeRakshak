@@ -243,6 +243,7 @@ export async function uploadMedia(
       uploaded_by_user_id: 1,
       status: "uploaded",
       upload_timestamp: new Date().toISOString(),
+      media_url: typeof window !== "undefined" ? URL.createObjectURL(file) : null,
     };
     const existingIdx = DEMO_MEDIA.findIndex((m) => m.media_id === newMedia.media_id);
     if (existingIdx >= 0) {
@@ -399,6 +400,7 @@ export const DEMO_VIDEO_SRC = DEMO_VIDEO_URL;
 export function getMediaUrl(media: InvestigationMedia | null): string {
   if (!media) return DEMO_VIDEO_URL;
   if (media.media_url) {
+    if (media.media_url.startsWith("blob:")) return media.media_url;
     const root = API_BASE.replace(/\/api\/v1\/?$/, "");
     return media.media_url.startsWith("http")
       ? media.media_url

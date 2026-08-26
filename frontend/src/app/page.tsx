@@ -1,6 +1,5 @@
-import React from 'react';
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { MeshGradientBackground } from '@/components/landing/MeshGradientBackground';
 import { Navbar } from '@/components/landing/Navbar';
 import { Hero } from '@/components/landing/Hero';
@@ -19,13 +18,7 @@ import { FinalCTA } from '@/components/landing/FinalCTA';
 import { Footer } from '@/components/landing/Footer';
 
 export default async function LandingPage() {
-  let userId = null;
-  try {
-    const authRes = await auth();
-    userId = authRes?.userId;
-  } catch (err) {
-    // Fallback gracefully when Clerk keys are not configured in environment
-  }
+  const { userId } = await auth();
 
   if (userId) {
     redirect('/overview');
