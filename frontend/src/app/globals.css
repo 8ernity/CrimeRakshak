@@ -385,18 +385,21 @@
   height: 36px;
   display: flex;
   align-items: center;
-  padding: 0 1rem;
+  justify-content: center;
+  padding: 0 1.5rem;
   cursor: pointer;
   gap: 0.4rem;
   font-size: 13px;
   font-weight: bold;
   border-radius: 30px;
+  white-space: nowrap;
   text-shadow: 2px 2px 3px rgba(221, 255, 0, 0.3);
-  background: linear-gradient(15deg, #ddff00, #b8d100, #93a300, #6e7500, #ddff00, #b8d100, #93a300, #6e7500) no-repeat;
+  background-color: #ddff00;
+  background-image: linear-gradient(15deg, #ddff00, #b8d100, #93a300, #6e7500, #ddff00, #b8d100, #93a300, #6e7500);
   background-size: 300%;
+  background-position: left center;
   color: #000;
   border: none;
-  background-position: left center;
   box-shadow: 0 30px 10px -20px rgba(221, 255, 0, 0.2);
   transition: background 0.3s ease, color 0.3s ease;
 }

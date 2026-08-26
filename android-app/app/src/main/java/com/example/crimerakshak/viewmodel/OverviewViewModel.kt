@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 
 data class OverviewState(
     val isLoading: Boolean = true,
+    val selectedRange: String = "All Karnataka",
     val totalCrimes: Int = 0,
     val activePatrols: Int = 124,
     val clearanceRate: Int = 84,
@@ -190,6 +191,47 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
                     isLoading = false,
                     error = e.message ?: "An error occurred fetching data from local database."
                 )
+            }
+        }
+    }
+
+    fun selectRange(range: String) {
+        _uiState.value = _uiState.value.copy(selectedRange = range)
+        
+        viewModelScope.launch {
+            try {
+                val pieSql = if (range == "All Karnataka") {
+                    """
+                        SELECT 
+                            SUM(theft) as theft, 
+                            SUM(robbery) as robbery, 
+                            SUM(burglary_day + burglary_night) as burglary, 
+                            SUM(cyber_crime) as cyber_crime, 
+                            SUM(murder) as murder 
+                        FROM district_major_heads_yearly
+                    """.trimIndent()
+                } else {
+                    val districtFilter = when (range) {
+                        "Bengaluru Commissionerate" -> "UPPER(district_units) LIKE '%BENGALURU%'"
+                        "Southern Range" -> "UPPER(district_units) IN ('MYSURU CITY', 'MYSURU DIST', 'MANDYA', 'HASSAN', 'KODAGU')"
+                        "Coastal Range" -> "UPPER(district_units) IN ('MANGALURU CITY', 'D.K.', 'UDUPI', 'UTTARA KANNADA')"
+                        else -> "UPPER(district_units) IN ('KALABURAGI', 'BELAGAVI CITY', 'BELAGAVI DIST', 'BALLARI', 'HUBBALLI DHARWAD CITY')"
+                    }
+                    """
+                        SELECT 
+                            SUM(theft) as theft, 
+                            SUM(robbery) as robbery, 
+                            SUM(burglary_day + burglary_night) as burglary, 
+                            SUM(cyber_crime) as cyber_crime, 
+                            SUM(murder) as murder 
+                        FROM district_major_heads_yearly
+                        WHERE $districtFilter
+                    """.trimIndent()
+                }
+                val pieChartData = dbHelper.runQuery(pieSql)
+                _uiState.value = _uiState.value.copy(pieChartData = pieChartData)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }

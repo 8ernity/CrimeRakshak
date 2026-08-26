@@ -63,6 +63,9 @@ dependencies {
     // YCharts for dashboard graphs
     implementation("co.yml:ycharts:2.1.0")
 
+    // Mapping
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)

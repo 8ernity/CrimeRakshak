@@ -77,9 +77,9 @@ fun CopilotScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.SmartToy, contentDescription = null, tint = PrimaryGreen)
+                Icon(Icons.Filled.SmartToy, contentDescription = null, tint = Primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("AI COPILOT", color = PrimaryGreen, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("AI COPILOT", color = Primary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Icon(Icons.Filled.History, contentDescription = null, tint = TextMuted)
         }
@@ -96,7 +96,7 @@ fun CopilotScreen(
                         Text("OFFICER 402", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                         Row {
                             Spacer(modifier = Modifier.weight(0.1f))
-                            Box(modifier = Modifier.weight(0.9f).background(SurfaceDark, RoundedCornerShape(12.dp)).border(1.dp, PrimaryGreen, RoundedCornerShape(12.dp)).padding(16.dp)) {
+                            Box(modifier = Modifier.weight(0.9f).background(SurfaceDark, RoundedCornerShape(12.dp)).border(1.dp, Primary, RoundedCornerShape(12.dp)).padding(16.dp)) {
                                 Text(message.text, color = TextLight, fontSize = 16.sp)
                             }
                         }
@@ -132,7 +132,7 @@ fun CopilotScreen(
                         permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 },
-                containerColor = if (isListening) Color(0xFFffb4ab) else PrimaryGreen,
+                containerColor = if (isListening) Color(0xFFffb4ab) else Primary,
                 shape = CircleShape
             ) {
                 Icon(

@@ -11,6 +11,10 @@ import androidx.compose.ui.Modifier
 import com.example.crimerakshak.theme.CrimeRakshakTheme
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.example.crimerakshak.api.RetrofitClient
 import kotlinx.coroutines.launch
 
@@ -19,6 +23,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            var showSplash by remember { mutableStateOf(true) }
+
             LaunchedEffect(Unit) {
                 try {
                     val response = RetrofitClient.apiService.login("admin", "ChangeMe123!")
@@ -33,7 +39,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    if (showSplash) {
+                        SplashScreen(onSplashFinished = { showSplash = false })
+                    } else {
+                        MainNavigation()
+                    }
                 }
             }
         }
