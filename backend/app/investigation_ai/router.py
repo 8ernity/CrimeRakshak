@@ -1,11 +1,11 @@
 """API Router for AI Video & Image Investigation Support."""
 import os
 from typing import Optional
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
+from app.core.database import get_db, SessionLocal
 from app.core.dependencies import get_client_ip, get_current_active_user, require_permissions
 from app.core.exceptions import AppHTTPException
 from app.models.rbac import User
@@ -133,6 +133,33 @@ def get_investigation_media_file(
     )
 
 
+def _run_analysis_background(media_id: int, user_id: int, file_type: str, sample_rate_fps: int, ip_address: str, job_type: str):
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            return
+        if file_type == "image":
+            services.analyze_image_media(
+                db=db,
+                media_id=media_id,
+                user=user,
+                ip_address=ip_address,
+            )
+        elif file_type == "video":
+            services.analyze_video_media(
+                db=db,
+                media_id=media_id,
+                user=user,
+                sample_rate_fps=sample_rate_fps,
+                ip_address=ip_address,
+            )
+    except Exception as e:
+        print(f"Background analysis failed: {e}")
+    finally:
+        db.close()
+
+
 @router.post(
     "/media/{media_id}/process",
     response_model=AnalysisJobResponse,
@@ -142,36 +169,33 @@ def process_investigation_media(
     media_id: int,
     payload: ProcessMediaRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ) -> AnalysisJobResponse:
     media = services.get_media_by_id(db, media_id)
-    if media.file_type == "image":
-        res = services.analyze_image_media(
-            db=db,
-            media_id=media_id,
-            user=current_user,
-            ip_address=get_client_ip(request),
-        )
-        return AnalysisJobResponse.model_validate(res["job"])
-    elif media.file_type == "video":
-        res = services.analyze_video_media(
-            db=db,
-            media_id=media_id,
-            user=current_user,
-            sample_rate_fps=payload.sample_rate_fps,
-            ip_address=get_client_ip(request),
-        )
-        return AnalysisJobResponse.model_validate(res["job"])
-    else:
-        job = services.create_analysis_job(
-            db=db,
-            media_id=media_id,
-            user=current_user,
-            job_type=payload.job_type,
-            ip_address=get_client_ip(request),
-        )
-        return AnalysisJobResponse.model_validate(job)
+    ip_address = get_client_ip(request)
+    
+    # We create the job initially so we can return its ID immediately
+    job = services.create_analysis_job(
+        db=db,
+        media_id=media_id,
+        user=current_user,
+        job_type=payload.job_type,
+        ip_address=ip_address,
+    )
+    
+    background_tasks.add_task(
+        _run_analysis_background,
+        media_id=media_id,
+        user_id=current_user.user_id,
+        file_type=media.file_type,
+        sample_rate_fps=payload.sample_rate_fps,
+        ip_address=ip_address,
+        job_type=payload.job_type
+    )
+    
+    return AnalysisJobResponse.model_validate(job)
 
 
 

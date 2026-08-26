@@ -11,15 +11,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ conversationId: string }> },
 ) {
-  let token: string | null = null;
-  try {
-    const authRes = await auth();
-    if (authRes?.getToken) {
-      token = await authRes.getToken();
-    }
-  } catch (e) {
-    // Clerk fallback
-  }
+  const { getToken } = await auth();
+  const token = await getToken();
 
   const { conversationId } = await params;
   try {

@@ -1,0 +1,5 @@
+- [x] Backend: Remove leftover syntax in `dependencies.py`
+- [x] Backend: Remove `clerk-backend-api` from `requirements.txt`
+- [x] Frontend: Remove `@clerk/nextjs` from `package.json`
+- [x] Frontend: Update `UniversalAuth.tsx` to remove Clerk and implement direct API login/register
+- [x] Frontend: Remove Clerk logic from `apiClient.ts`

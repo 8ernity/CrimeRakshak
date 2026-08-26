@@ -8,7 +8,6 @@
 // Optional: if the Next.js app needs to override the local FastAPI URL
 //   BACKEND_URL=http://127.0.0.1:8001
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { auth } from "@clerk/nextjs/server";
 
 const BACKEND_URL =
@@ -241,15 +240,8 @@ PREVENTION:
 
 export async function POST(req: Request) {
   try {
-    let token: string | null = null;
-    try {
-      const authRes = await auth();
-      if (authRes?.getToken) {
-        token = await authRes.getToken();
-      }
-    } catch (e) {
-      // Clerk unconfigured fallback
-    }
+    const { getToken } = await auth();
+    let token = await getToken();
 
     const { message, conversation_id, language } = await req.json();
     if (!message || typeof message !== "string") {

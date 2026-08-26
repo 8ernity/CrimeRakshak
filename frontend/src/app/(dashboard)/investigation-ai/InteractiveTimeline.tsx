@@ -138,14 +138,14 @@ export function InteractiveTimeline({ events, onJumpToTimestamp }: InteractiveTi
             </div>
           )}
 
-          {filtered.map((event) => {
+          {filtered.map((event, idx) => {
             const cfg = EVENT_CONFIG[event.event_type] || DEFAULT_CONFIG;
             const Icon = cfg.icon;
             const titleText = getEventTitle(event);
 
             return (
               <motion.div
-                key={event.event_id}
+                key={`${event.event_id}-${event.start_timestamp_seconds}-${idx}`}
                 variants={itemVariants}
                 whileHover={{ x: 4 }}
                 onClick={() => onJumpToTimestamp(event.start_timestamp_seconds)}

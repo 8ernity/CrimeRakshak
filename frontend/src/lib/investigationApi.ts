@@ -190,7 +190,13 @@ export async function listMedia(firId?: string): Promise<MediaListResponse> {
       : "/investigation/media?limit=50&offset=0";
     return await fetchAPI(url);
   } catch {
-    const items = firId ? DEMO_MEDIA.filter((m) => m.fir_id === firId) : DEMO_MEDIA;
+    const rawItems = firId ? DEMO_MEDIA.filter((m) => m.fir_id === firId) : DEMO_MEDIA;
+    const seen = new Set<number>();
+    const items = rawItems.filter((m) => {
+      if (seen.has(m.media_id)) return false;
+      seen.add(m.media_id);
+      return true;
+    });
     return { items, total: items.length };
   }
 }
@@ -237,8 +243,14 @@ export async function uploadMedia(
       uploaded_by_user_id: 1,
       status: "uploaded",
       upload_timestamp: new Date().toISOString(),
+      media_url: typeof window !== "undefined" ? URL.createObjectURL(file) : null,
     };
-    DEMO_MEDIA.unshift(newMedia);
+    const existingIdx = DEMO_MEDIA.findIndex((m) => m.media_id === newMedia.media_id);
+    if (existingIdx >= 0) {
+      DEMO_MEDIA[existingIdx] = newMedia;
+    } else {
+      DEMO_MEDIA.unshift(newMedia);
+    }
     return newMedia;
   }
 }
@@ -388,6 +400,7 @@ export const DEMO_VIDEO_SRC = DEMO_VIDEO_URL;
 export function getMediaUrl(media: InvestigationMedia | null): string {
   if (!media) return DEMO_VIDEO_URL;
   if (media.media_url) {
+    if (media.media_url.startsWith("blob:")) return media.media_url;
     const root = API_BASE.replace(/\/api\/v1\/?$/, "");
     return media.media_url.startsWith("http")
       ? media.media_url
