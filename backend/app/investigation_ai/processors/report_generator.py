@@ -339,11 +339,16 @@ def generate_fallback_report(
     media_type = "video" if is_video else "image"
     total_dets = detection_stats.get("total_detections", 0)
     breakdown = detection_stats.get("class_breakdown", {})
-    breakdown_str = ", ".join(f"{c} {cls}(s)" for cls, c in breakdown.items()) if breakdown else "no objects"
+    
+    # Compile summary paragraph
+    unique_counts = defaultdict(int)
+    for tr in tracking_results:
+        unique_counts[tr['object_class']] += 1
+    breakdown_str = ", ".join(f"{c} {cls}(s)" for cls, c in unique_counts.items()) if unique_counts else "no unique objects"
 
     summary = (
-        f"Automated forensic analysis of {media_type} evidence '{file_name}' identified {total_dets} "
-        f"detection(s) [{breakdown_str}] across {len(tracking_results)} tracked entities and "
+        f"Automated forensic analysis of {media_type} evidence '{file_name}' identified {total_dets} bounding box "
+        f"detection(s) representing [{breakdown_str}] across {len(tracking_results)} tracked entities and "
         f"{len(events)} timeline event(s). "
         f"Crime detection layer classification: {crime_class} (confidence: {crime_conf:.0%}). "
         f"All observations are automated computer vision outputs requiring human investigative verification."

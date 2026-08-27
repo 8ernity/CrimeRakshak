@@ -63,7 +63,6 @@ const navSections: NavSection[] = [
       { href: "/profiling", label: "Offender Profiles", icon: Fingerprint },
       { href: "/case-intel", label: "Case Intelligence", icon: FileSearch },
       { href: "/financial", label: "Financial Trails", icon: Banknote },
-      { href: "/investigation-ai", label: "AI Investigation", icon: Video },
     ],
   },
   {

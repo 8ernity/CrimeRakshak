@@ -3,6 +3,7 @@ package com.example.crimerakshak
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -261,22 +262,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     }
                 }
                 
-                Spacer(modifier = Modifier.width(4.dp))
-                
-                // Crime Filters
-                val filters = listOf("ALL" to "All Crimes", "VIOLENT" to "Violent / Dacoity", "CYBER" to "Cyber & Fraud", "NARCOTICS" to "NDPS Narcotics")
-                filters.forEach { (id, label) ->
-                    Surface(
-                        onClick = { crimeFilter = id },
-                        color = if (crimeFilter == id) Color(0xFF8B5CF6) else Color(0xFF1E2128),
-                        shape = CircleShape,
-                        border = if (crimeFilter == id) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
-                    ) {
-                        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(4.dp))
+                // Crime filters moved to floating controls
                 
                 // Shift Filter Custom Toggle
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -329,11 +315,13 @@ fun MapScreen(modifier: Modifier = Modifier) {
         }
         
         // Floating Controls Right
-        Box(
+        Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 16.dp, top = 164.dp) // Placed right below the action chips
+                .padding(end = 16.dp, top = 164.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Map Type Layer Button
             Surface(
                 onClick = { showMapTypeSheet = true },
                 modifier = Modifier.size(48.dp),
@@ -343,6 +331,47 @@ fun MapScreen(modifier: Modifier = Modifier) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Layers, contentDescription = "Layers", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
+            
+            // Crime Filter Dropdown
+            var showCrimeDropdown by remember { mutableStateOf(false) }
+            val filters = listOf("ALL" to "All Crimes", "VIOLENT" to "Violent / Dacoity", "CYBER" to "Cyber & Fraud", "NARCOTICS" to "NDPS Narcotics")
+            val currentFilterLabel = filters.find { it.first == crimeFilter }?.second ?: "All Crimes"
+            
+            Box {
+                Surface(
+                    onClick = { showCrimeDropdown = true },
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    color = Color(0xFF303134),
+                    shadowElevation = 6.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.FilterAlt, contentDescription = "Crime Filters", tint = Color.White, modifier = Modifier.size(24.dp))
+                    }
+                }
+                
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showCrimeDropdown,
+                    onDismissRequest = { showCrimeDropdown = false },
+                    modifier = Modifier.background(Color(0xFF1E2128))
+                ) {
+                    filters.forEach { (id, label) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    text = label, 
+                                    color = if (crimeFilter == id) Primary else Color.White,
+                                    fontWeight = if (crimeFilter == id) FontWeight.Bold else FontWeight.Normal
+                                ) 
+                            },
+                            onClick = {
+                                crimeFilter = id
+                                showCrimeDropdown = false
+                            }
+                        )
+                    }
                 }
             }
         }

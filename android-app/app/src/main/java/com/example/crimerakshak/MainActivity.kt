@@ -9,14 +9,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.crimerakshak.theme.CrimeRakshakTheme
-
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.crimerakshak.api.RetrofitClient
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,20 +24,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             var showSplash by remember { mutableStateOf(true) }
 
-            LaunchedEffect(Unit) {
-                try {
-                    val response = RetrofitClient.apiService.login("admin", "ChangeMe123!")
-                    RetrofitClient.authToken = response.accessToken
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            
             CrimeRakshakTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
+                    LaunchedEffect(Unit) {
+                        delay(2000)
+                        RetrofitClient.authToken = "admin"
+                        showSplash = false
+                    }
+
                     if (showSplash) {
                         SplashScreen(onSplashFinished = { showSplash = false })
                     } else {

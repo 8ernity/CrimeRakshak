@@ -112,10 +112,27 @@ class CrimeDecisionEngine:
             safeguards_triggered.append("AMBIGUOUS_INTERACTION_NO_VIOLENCE")
             forced_decision = "uncertain"
 
+        # Pre-calculate combination rules
+        has_multi_person_interaction = any(
+            e.get("event_type") == "pattern_multi_person_interaction" for e in all_events
+        )
+        has_chase = any(
+            e.get("event_type") == "pattern_rapid_movement_chase" for e in all_events
+        )
+        has_fall = any(
+            e.get("event_type") in ("pattern_fall_lying_down", "posture_falling", "posture_lying_down")
+            for e in all_events
+        )
+
+        is_suspicious_combo = (
+            (has_multi_person_interaction or has_chase) and has_fall
+        ) or (has_multi_person_interaction and has_chase)
+
         # 4. Handle Image vs Video Specific Constraints
         if not is_video and forced_decision is None:
             # Single static image cannot confirm a crime without explicit violent indicators
-            if raw_score < 0.70:
+            # Bypass if we have a highly suspicious physical combo (e.g. fight with fall)
+            if not is_suspicious_combo and raw_score < 0.70:
                 if raw_score < 0.20:
                     forced_decision = "non_crime"
                 else:
@@ -124,25 +141,11 @@ class CrimeDecisionEngine:
 
         # 5. Multi-Event Combination Rules for potential_crime
         if forced_decision is None:
-            has_multi_person_interaction = any(
-                e.get("event_type") == "pattern_multi_person_interaction" for e in all_events
-            )
-            has_chase = any(
-                e.get("event_type") == "pattern_rapid_movement_chase" for e in all_events
-            )
-            has_fall = any(
-                e.get("event_type") in ("pattern_fall_lying_down", "posture_falling", "posture_lying_down")
-                for e in all_events
-            )
 
-            # Potential crime requires at least ONE aggressive combo:
-            # - (multi_person_interaction OR chase) AND fall/lying_down
-            # - OR multi_person_interaction AND chase
-            is_suspicious_combo = (
-                (has_multi_person_interaction or has_chase) and has_fall
-            ) or (has_multi_person_interaction and has_chase)
+            # Lower threshold for static images since they can't accumulate temporal sequence scores
+            threshold = 0.30 if not is_video else self.crime_threshold
 
-            if is_suspicious_combo and raw_score >= self.crime_threshold:
+            if is_suspicious_combo and raw_score >= threshold:
                 final_decision = "potential_crime"
             elif raw_score < self.non_crime_threshold:
                 final_decision = "non_crime"
