@@ -197,6 +197,9 @@ export default function InvestigationAIPage() {
                   getDetections(res.media_id).then(d => setDetections(d.detections || []));
                   getEvents(res.media_id).then(e => setEvents(e.events || []));
                   fetchSummary(res.media_id);
+                  getCrimeDetection(res.media_id).then(c => setCrimeDetection(c)).catch(() => {});
+                  setIsReportLoading(true);
+                  getAIReport(res.media_id).then(r => setAiReport(r)).catch(() => {}).finally(() => setIsReportLoading(false));
                 }
                 return { ...job, ...res, fileName: job.fileName };
               }
@@ -226,6 +229,8 @@ export default function InvestigationAIPage() {
       setDetections([]);
       setEvents([]);
       setSummaryData(null);
+      setCrimeDetection(null);
+      setAiReport(null);
       setHighlightedTrackId(null);
 
       setMediaItems((prev) => {

@@ -249,12 +249,16 @@ def generate_fallback_summary(structured_evidence: Dict[str, Any]) -> Dict[str, 
     breakdown = detection_stats.get("class_breakdown", {})
 
     # Prose Summary
-    breakdown_str = ", ".join([f"{count} {cls}(s)" for cls, count in breakdown.items()]) if breakdown else "no objects"
+    unique_counts = defaultdict(int)
+    for tr in tracking_results:
+        unique_counts[tr['object_class']] += 1
+    breakdown_str = ", ".join([f"{count} {cls}(s)" for cls, count in unique_counts.items()]) if unique_counts else "no unique objects"
+    
     fir_str = f"Linked to Case FIR '{fir_meta.get('fir_id')}'." if fir_meta.get("fir_id") else "No FIR linked."
     
     summary_text = (
         f"Forensic evaluation of {file_type} media '{file_name}' (ID: {media_id}) identified a total of {total_dets} "
-        f"object detection(s) [{breakdown_str}] across {len(tracking_results)} tracked trajectory paths and {len(events)} "
+        f"bounding box detection(s) representing [{breakdown_str}] across {len(tracking_results)} tracked trajectory paths and {len(events)} "
         f"timeline event(s). {fir_str} All observed detections represent automated computer vision outputs requiring officer verification."
     )
 

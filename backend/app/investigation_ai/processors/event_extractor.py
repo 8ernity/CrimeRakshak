@@ -161,6 +161,29 @@ class EventExtractor:
                     "description": f"Person (Track #{tid}) last observed / exited frame view at timestamp {last_timestamp:.1f}s (Frame #{last_frame}).",
                 })
 
+        # 5. Single-Frame Multi-Person Interaction (For Static Images)
+        # If there are multiple people in the same frame with high IoU, flag as interaction
+        from app.investigation_ai.processors.temporal_analyzer import _bbox_iou
+        for i in range(len(sorted_dets)):
+            for j in range(i + 1, len(sorted_dets)):
+                dA = sorted_dets[i]
+                dB = sorted_dets[j]
+                if dA.get("object_class") == "person" and dB.get("object_class") == "person" and dA.get("frame_number") == dB.get("frame_number"):
+                    if _bbox_iou(dA.get("bbox", {}), dB.get("bbox", {})) > 0.15:
+                        events.append({
+                            "event_type": "pattern_multi_person_interaction",
+                            "timestamp_seconds": dA.get("timestamp_seconds", 0.0),
+                            "frame_number": dA.get("frame_number", 0),
+                            "media_id": media_id,
+                            "confidence": 0.86,
+                            "pattern_name": "multi_person_interaction",
+                            "description": "Physical proximity/interaction detected in static frame."
+                        })
+                        break
+            else:
+                continue
+            break
+
         # 6. Multi-Frame Temporal Pattern Analysis
         try:
             from app.investigation_ai.processors.temporal_analyzer import TemporalAnalyzer

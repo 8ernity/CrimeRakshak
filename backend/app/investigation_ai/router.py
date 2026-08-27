@@ -135,19 +135,64 @@ def get_investigation_media_file(
     )
 
 
-def _run_analysis_background(media_id: int, user_id: int, file_type: str, sample_rate_fps: int, ip_address: str, job_type: str):
+def _run_analysis_background(media_id: int, job_id: int, user_id: int, file_type: str, sample_rate_fps: int, ip_address: str, job_type: str):
+    """Run analysis in background, updating the pre-created job (job_id) directly."""
     db = SessionLocal()
     try:
+        from app.investigation_ai.models import InvestigationAnalysisJob, InvestigationMedia
+        from datetime import datetime
+
         user = db.query(User).filter(User.user_id == user_id).first()
         if not user:
             return
+
+        # Fetch the pre-created job and mark it as processing
+        job = db.query(InvestigationAnalysisJob).filter(
+            InvestigationAnalysisJob.job_id == job_id
+        ).first()
+        if not job:
+            return
+        job.status = "processing"
+        db.commit()
+
         if file_type == "image":
-            services.analyze_image_media(
-                db=db,
-                media_id=media_id,
-                user=user,
-                ip_address=ip_address,
-            )
+            # Run detection directly instead of calling analyze_image_media
+            # (which creates its own duplicate job)
+            from app.investigation_ai.processors.image_processor import ImageProcessor
+            media = services.get_media_by_id(db, media_id)
+            processor = ImageProcessor()
+            results = processor.process_image(media.file_path)
+
+            for det in results.get("detections", []):
+                bbox = det["bbox"]
+                from app.investigation_ai.models import DetectionResult
+                detection_rec = DetectionResult(
+                    job_id=job.job_id,
+                    media_id=media.media_id,
+                    frame_number=0,
+                    timestamp_seconds=0.0,
+                    object_class=det["object_class"],
+                    tracking_id=det.get("tracking_id"),
+                    confidence=det["confidence"],
+                    bbox_xmin=bbox["xmin"],
+                    bbox_ymin=bbox["ymin"],
+                    bbox_xmax=bbox["xmax"],
+                    bbox_ymax=bbox["ymax"],
+                )
+                db.add(detection_rec)
+
+            job.status = "completed"
+            job.progress_pct = 100.0
+            job.completed_at = datetime.utcnow()
+            media.status = "processed"
+            db.commit()
+
+            # Trigger automatic event extraction & crime decision
+            try:
+                services.extract_events_for_media(db=db, media_id=media.media_id, user=user, job_id=job.job_id, ip_address=ip_address)
+            except Exception as ev_err:
+                print(f"Automatic event extraction failed for media {media.media_id}: {ev_err}")
+
         elif file_type == "video":
             services.analyze_video_media(
                 db=db,
@@ -156,8 +201,34 @@ def _run_analysis_background(media_id: int, user_id: int, file_type: str, sample
                 sample_rate_fps=sample_rate_fps,
                 ip_address=ip_address,
             )
+            # Also mark the pre-created job as completed since analyze_video_media
+            # creates its own job too
+            db.refresh(job)
+            if job.status == "processing":
+                job.status = "completed"
+                job.progress_pct = 100.0
+                job.completed_at = datetime.utcnow()
+                db.commit()
+
     except Exception as e:
         print(f"Background analysis failed: {e}")
+        import traceback
+        traceback.print_exc()
+        from app.investigation_ai.models import InvestigationAnalysisJob, InvestigationMedia
+        from sqlalchemy import update
+        db.execute(
+            update(InvestigationAnalysisJob)
+            .where(InvestigationAnalysisJob.media_id == media_id)
+            .where(InvestigationAnalysisJob.status.in_(["queued", "processing"]))
+            .values(status="failed", error_message=str(e))
+        )
+        db.execute(
+            update(InvestigationMedia)
+            .where(InvestigationMedia.media_id == media_id)
+            .where(InvestigationMedia.status.in_(["queued", "processing"]))
+            .values(status="failed")
+        )
+        db.commit()
     finally:
         db.close()
 
@@ -190,6 +261,7 @@ def process_investigation_media(
     background_tasks.add_task(
         _run_analysis_background,
         media_id=media_id,
+        job_id=job.job_id,
         user_id=current_user.user_id,
         file_type=media.file_type,
         sample_rate_fps=payload.sample_rate_fps,
