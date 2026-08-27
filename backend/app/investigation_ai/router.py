@@ -174,6 +174,7 @@ def _run_analysis_background(media_id: int, job_id: int, user_id: int, file_type
                     object_class=det["object_class"],
                     tracking_id=det.get("tracking_id"),
                     confidence=det["confidence"],
+                    posture=det.get("posture"),
                     bbox_xmin=bbox["xmin"],
                     bbox_ymin=bbox["ymin"],
                     bbox_xmax=bbox["xmax"],

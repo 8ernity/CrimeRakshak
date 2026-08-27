@@ -56,11 +56,9 @@ job.progress_pct = 100.0
 media.status = "processed"
 db.commit()
 
-from app.core.models import User
-user = db.query(User).first()
 try:
     # also call event extraction
-    services.extract_events_for_media(db=db, media_id=media.media_id, user=user, job_id=job.job_id, ip_address="127.0.0.1")
+    services.extract_events_for_media(db=db, media_id=media.media_id, user=None, job_id=job.job_id, ip_address="127.0.0.1")
 except Exception as e:
     print("Event extraction error:", e)
 
