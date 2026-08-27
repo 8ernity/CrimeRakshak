@@ -404,7 +404,7 @@ export default function InvestigationAIPage() {
                 videoRef={videoRef}
                 detections={detections}
                 highlightedTrackId={highlightedTrackId}
-                isImage={selectedMedia?.file_type === "image"}
+                isImage={selectedMedia?.file_type === "image" || selectedMedia?.file_name.toLowerCase().endsWith(".gif")}
                 mediaSrc={getMediaUrl(selectedMedia)}
               />
             </div>
