@@ -164,4 +164,6 @@ def download_app():
     apk_path = os.path.join(os.path.dirname(__file__), "../static/app-release.apk")
     if os.path.exists(apk_path):
         return FileResponse(apk_path, media_type="application/vnd.android.package-archive", filename="CrimeRakshak.apk")
-    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+    # APK is hosted on the frontend; redirect there
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="https://crimerakshak-frontend-50044347084.development.catalystappsail.in/crimerakshak.apk")

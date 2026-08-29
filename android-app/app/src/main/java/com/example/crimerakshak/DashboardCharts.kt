@@ -49,7 +49,7 @@ fun DashboardCharts(state: OverviewState) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "CRIME CATEGORY BREAKDOWN (2025)", 
+                    text = "CRIME CATEGORY BREAKDOWN", 
                     color = TextMuted, 
                     fontSize = 12.sp, 
                     fontWeight = FontWeight.Bold,
@@ -59,21 +59,50 @@ fun DashboardCharts(state: OverviewState) {
                 
                 if (state.pieChartData.isNotEmpty()) {
                     val row = state.pieChartData.first()
-                    val theft = (row["theft"] as? Number)?.toFloat() ?: 0f
-                    val robbery = (row["robbery"] as? Number)?.toFloat() ?: 0f
-                    val burglary = (row["burglary"] as? Number)?.toFloat() ?: 0f
-                    val cyberCrime = (row["cyber_crime"] as? Number)?.toFloat() ?: 0f
-                    val murder = (row["murder"] as? Number)?.toFloat() ?: 0f
-                    val total = theft + robbery + burglary + cyberCrime + murder
+                    
+                    val categories = listOf(
+                        "Murder" to ((row["murder"] as? Number)?.toFloat() ?: 0f),
+                        "Attempt to Murder" to ((row["attempt_to_murder"] as? Number)?.toFloat() ?: 0f),
+                        "Rape" to ((row["rape"] as? Number)?.toFloat() ?: 0f),
+                        "Dacoity" to ((row["dacoity"] as? Number)?.toFloat() ?: 0f),
+                        "Robbery" to ((row["robbery"] as? Number)?.toFloat() ?: 0f),
+                        "Burglary" to ((row["burglary"] as? Number)?.toFloat() ?: 0f),
+                        "Theft" to ((row["theft"] as? Number)?.toFloat() ?: 0f),
+                        "Riots" to ((row["riots"] as? Number)?.toFloat() ?: 0f),
+                        "Cases of Hurt" to ((row["cases_of_hurt"] as? Number)?.toFloat() ?: 0f),
+                        "Cruelty by Husband" to ((row["cruelty_by_husband"] as? Number)?.toFloat() ?: 0f),
+                        "Dowry Deaths" to ((row["dowry_deaths"] as? Number)?.toFloat() ?: 0f),
+                        "Fatal Motor Accidents" to ((row["fatal_motor_accidents"] as? Number)?.toFloat() ?: 0f),
+                        "Non-Fatal Motor Accidents" to ((row["non_fatal_motor_accidents"] as? Number)?.toFloat() ?: 0f),
+                        "Molestation" to ((row["molestation"] as? Number)?.toFloat() ?: 0f),
+                        "SC/ST Act" to ((row["sc_st"] as? Number)?.toFloat() ?: 0f),
+                        "Gambling" to ((row["gambling"] as? Number)?.toFloat() ?: 0f),
+                        "DP Act" to ((row["dp_act"] as? Number)?.toFloat() ?: 0f),
+                        "Cyber Crime" to ((row["cyber_crime"] as? Number)?.toFloat() ?: 0f),
+                        "POCSO" to ((row["pocso"] as? Number)?.toFloat() ?: 0f),
+                        "POCSO Rape" to ((row["pocso_rape"] as? Number)?.toFloat() ?: 0f)
+                    ).filter { it.second > 0f }.sortedByDescending { it.second }
+
+                    val top8 = categories.take(8)
+                    val otherTotal = categories.drop(8).sumOf { it.second.toDouble() }.toFloat()
+                    
+                    val finalCategories = top8.toMutableList()
+                    if (otherTotal > 0f) {
+                        finalCategories.add("Other Categories" to otherTotal)
+                    }
+
+                    val total = categories.sumOf { it.second.toDouble() }.toFloat()
+                    
+                    val chartPalette = listOf(
+                        Color(0xFF6366f1), Color(0xFFa855f7), Color(0xFFec4899), Color(0xFFf43f5e), 
+                        Color(0xFFf97316), Color(0xFFeab308), Color(0xFF84cc16), Color(0xFF22c55e), 
+                        Color(0xFF06b6d4), Color(0xFF3b82f6)
+                    )
                     
                     val pieChartData = PieChartData(
-                        slices = listOf(
-                            PieChartData.Slice("Theft", theft, Color(0xFFa3d73c)),
-                            PieChartData.Slice("Robbery", robbery, Color(0xFFe1e4d3)),
-                            PieChartData.Slice("Burglary", burglary, Color(0xFF8c9383)),
-                            PieChartData.Slice("Cyber Crime", cyberCrime, Color(0xFF4caf50)),
-                            PieChartData.Slice("Murder", murder, Color(0xFFf44336))
-                        ),
+                        slices = finalCategories.mapIndexed { index, pair ->
+                            PieChartData.Slice(pair.first, pair.second, chartPalette[index % chartPalette.size])
+                        },
                         plotType = co.yml.charts.common.model.PlotType.Donut
                     )
                     val pieChartConfig = PieChartConfig(
@@ -82,7 +111,7 @@ fun DashboardCharts(state: OverviewState) {
                         animationDuration = 1500,
                         activeSliceAlpha = .9f,
                         isEllipsizeEnabled = true,
-                        backgroundColor = Color.Transparent,
+                        backgroundColor = SurfaceDark,
                         strokeWidth = 35f
                     )
                     Box(modifier = Modifier.height(200.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -102,16 +131,21 @@ fun DashboardCharts(state: OverviewState) {
                     }
                     
                     // Legend
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        LegendItem("Theft", Color(0xFFa3d73c))
-                        LegendItem("Robbery", Color(0xFFe1e4d3))
-                        LegendItem("Burglary", Color(0xFF8c9383))
-                        LegendItem("Cyber Crime", Color(0xFF4caf50))
-                        LegendItem("Murder", Color(0xFFf44336))
+                        finalCategories.chunked(3).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                rowItems.forEachIndexed { index, item ->
+                                    val globalIndex = finalCategories.indexOf(item)
+                                    LegendItem(item.first, chartPalette[globalIndex % chartPalette.size])
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -125,7 +159,7 @@ fun DashboardCharts(state: OverviewState) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "MONTHLY CRIME VOLUME (2025)", 
+                    text = "MONTHLY CRIME VOLUME", 
                     color = TextMuted, 
                     fontSize = 12.sp, 
                     fontWeight = FontWeight.Bold,
@@ -142,27 +176,26 @@ fun DashboardCharts(state: OverviewState) {
                     val xAxisData = AxisData.Builder()
                         .axisStepSize(40.dp)
                         .steps(barList.size - 1)
-                        .bottomPadding(130.dp)
+                        .bottomPadding(20.dp)
                         .startDrawPadding(20.dp)
                         .axisLabelColor(TextMuted)
                         .axisLineColor(Color.Transparent)
                         .axisLabelFontSize(10.sp)
-                        .axisLabelAngle(270f)
                         .backgroundColor(Color.Transparent)
-                        .labelData { index -> barList.getOrNull(index)?.label ?: "" }
+                        .labelData { index -> barList.getOrNull(index)?.label?.take(3) ?: "" }
                         .build()
                         
                     val yAxisData = AxisData.Builder()
                         .steps(5)
                         .axisLabelColor(TextMuted)
                         .axisLineColor(Color.Transparent)
-                        .labelAndAxisLinePadding(25.dp)
+                        .labelAndAxisLinePadding(10.dp)
                         .axisLabelFontSize(10.sp)
                         .backgroundColor(Color.Transparent)
                         .labelData { i ->
                             val max = barList.maxOfOrNull { it.point.y } ?: 0f
                             val stepValue = if (max == 0f) 1f else max / 5
-                            (i * stepValue).toInt().toString() + "  "
+                            (i * stepValue).toInt().toString()
                         }.build()
                         
                     val barChartData = BarChartData(
@@ -173,7 +206,7 @@ fun DashboardCharts(state: OverviewState) {
                         barStyle = BarStyle(paddingBetweenBars = 15.dp, barWidth = 16.dp, cornerRadius = 4.dp),
                         horizontalExtraSpace = 10.dp
                     )
-                    Box(modifier = Modifier.height(260.dp).fillMaxWidth().padding(horizontal = 4.dp)) {
+                    Box(modifier = Modifier.height(200.dp).fillMaxWidth().padding(horizontal = 4.dp)) {
                         BarChart(modifier = Modifier.fillMaxSize(), barChartData = barChartData)
                     }
                 }
@@ -188,7 +221,7 @@ fun DashboardCharts(state: OverviewState) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "TOP 10 DISTRICTS - CRIME VOLUME (2025)", 
+                    text = "TOP 10 DISTRICTS - CRIME VOLUME", 
                     color = TextMuted, 
                     fontSize = 12.sp, 
                     fontWeight = FontWeight.Bold,
@@ -206,20 +239,19 @@ fun DashboardCharts(state: OverviewState) {
                     val xAxisData = AxisData.Builder()
                         .axisStepSize(40.dp)
                         .steps(points.size - 1)
-                        .bottomPadding(130.dp)
+                        .bottomPadding(20.dp)
                         .startDrawPadding(20.dp)
-                        .labelData { i -> topDistricts.getOrNull(i)?.name?.uppercase() ?: "" }
+                        .labelData { i -> topDistricts.getOrNull(i)?.name?.take(3)?.uppercase() ?: "" }
                         .labelAndAxisLinePadding(10.dp)
                         .axisLabelColor(TextMuted)
                         .axisLineColor(Color.Transparent)
                         .axisLabelFontSize(10.sp)
-                        .axisLabelAngle(270f)
                         .backgroundColor(Color.Transparent)
                         .build()
                         
                     val yAxisData = AxisData.Builder()
                         .steps(5)
-                        .labelAndAxisLinePadding(25.dp)
+                        .labelAndAxisLinePadding(10.dp)
                         .axisLabelColor(TextMuted)
                         .axisLineColor(Color.Transparent)
                         .axisLabelFontSize(10.sp)
@@ -227,7 +259,7 @@ fun DashboardCharts(state: OverviewState) {
                         .labelData { i ->
                             val max = points.maxOfOrNull { it.y } ?: 0f
                             val stepValue = if (max == 0f) 1f else max / 5
-                            (i * stepValue).toInt().toString() + "  "
+                            (i * stepValue).toInt().toString()
                         }.build()
                         
                     val lineChartData = LineChartData(
@@ -257,7 +289,7 @@ fun DashboardCharts(state: OverviewState) {
                         yAxisData = yAxisData,
                         backgroundColor = Color.Transparent
                     )
-                    Box(modifier = Modifier.height(260.dp).fillMaxWidth().padding(horizontal = 4.dp)) {
+                    Box(modifier = Modifier.height(200.dp).fillMaxWidth().padding(horizontal = 4.dp)) {
                         LineChart(modifier = Modifier.fillMaxSize(), lineChartData = lineChartData)
                     }
                 }
