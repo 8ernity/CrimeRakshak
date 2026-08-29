@@ -85,13 +85,24 @@ try:
         print("[OK] app.main imported successfully")
         sys.stdout.flush()
     except Exception as exc:
-        print(f"[WARN] Failed to import app.main, mounting fallback app: {exc}", file=sys.stderr)
+        error_string = str(exc)
+        print(f"[WARN] Failed to import app.main, mounting fallback app: {error_string}", file=sys.stderr)
         traceback.print_exc()
         sys.stderr.flush()
         app = fastapi.FastAPI()
-        @app.get("/{path:path}")
+        
+        from fastapi.middleware.cors import CORSMiddleware
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        
+        @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
         def fallback_all(path: str):
-            return {"status": "degraded", "error": str(exc)}
+            return {"status": "degraded", "error": error_string, "message": "Backend running in fallback mode due to missing dependencies"}
 
     if __name__ == "__main__":
         print(f"Launching Uvicorn server on 0.0.0.0:{port}...")
