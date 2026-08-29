@@ -69,7 +69,7 @@ fun MapScreen(modifier: Modifier = Modifier) {
         AndroidView(
             factory = { ctx ->
                 Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
-                Configuration.getInstance().userAgentValue = context.packageName
+                Configuration.getInstance().userAgentValue = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
                 
                 MapView(ctx).apply {
                     mapView = this
@@ -496,37 +496,96 @@ private fun loadGeoJsonOverlay(context: android.content.Context, mapView: MapVie
     }
 }
 
+private fun matchGeoJsonDistrictName(rawName: String): String {
+    val norm = rawName.lowercase().trim()
+    if (norm.contains("bangalore rural")) return "Bengaluru Dist"
+    if (norm.contains("bangalore") || norm.contains("bengaluru")) return "Bengaluru City"
+    if (norm.contains("mysore") || norm.contains("mysuru")) return "Mysuru City"
+    if (norm.contains("dharwad") || norm.contains("hubli")) return "Hubli-Dharwad City"
+    if (norm.contains("belgaum") || norm.contains("belagavi")) return "Belagavi City"
+    if (norm.contains("gulbarga") || norm.contains("kalaburagi")) return "Kalaburagi City"
+    if (norm.contains("shimoga") || norm.contains("shivamogga")) return "Shivamogga"
+    if (norm.contains("tumkur") || norm.contains("tumakuru")) return "Tumakuru"
+    if (norm.contains("chikmagalur") || norm.contains("chikkamagaluru")) return "Chikkamagaluru"
+    if (norm.contains("bijapur") || norm.contains("vijayapura")) return "Vijayapura"
+    if (norm.contains("dakshina kannada") || norm.contains("mangaluru")) return "Mangaluru City"
+    if (norm.contains("bellary") || norm.contains("ballari")) return "Ballari"
+    if (norm.contains("chamrajnagar") || norm.contains("chamarajanagara")) return "Chamarajanagara"
+    if (norm.contains("davanagere")) return "Davanagere"
+    if (norm.contains("mandya")) return "Mandya"
+    if (norm.contains("bagalkot") || norm.contains("bagalkote")) return "Bagalkot"
+    if (norm.contains("chitradurga")) return "Chitradurga"
+    if (norm.contains("kolar")) return "Kolar"
+    if (norm.contains("raichur")) return "Raichur"
+    if (norm.contains("uttara kannada")) return "Uttara Kannada"
+    if (norm.contains("gadag")) return "Gadag"
+    if (norm.contains("udupi")) return "Udupi"
+    if (norm.contains("bidar")) return "Bidar"
+    if (norm.contains("hassan")) return "Hassan"
+    if (norm.contains("haveri")) return "Haveri"
+    if (norm.contains("kodagu")) return "Kodagu"
+    if (norm.contains("koppal")) return "Koppal"
+    if (norm.contains("chikkaballapura")) return "Chikkaballapura"
+    if (norm.contains("ramanagara")) return "Ramanagara"
+    if (norm.contains("yadgir")) return "Yadgir"
+    if (norm.contains("vijayanagara")) return "Vijayanagara"
+    return rawName
+}
+
 private fun getAdjustedRiskTier(districtName: String, crimeFilter: String, shiftFilter: String): String {
-    val norm = districtName.lowercase().trim()
-    var tier = "Moderate"
+    val canonicalName = matchGeoJsonDistrictName(districtName)
+    val norm = canonicalName.lowercase().trim()
 
-    if (norm.contains("bengaluru") || norm.contains("mysuru") || norm.contains("belagavi dist")) {
-        tier = "Critical"
-    } else if (norm.contains("mangalu") || norm.contains("hubli") || norm.contains("kalaburagi")) {
-        tier = "High"
-    } else if (norm.contains("bidar") || norm.contains("yadgir") || norm.contains("kodagu")) {
-        tier = "Safe"
-    }
+    var tier = "Safe"
 
-    if (crimeFilter == "VIOLENT") {
-        val criticalViolent = listOf("kalaburagi dist", "kalaburagi city", "ballari", "belagavi dist", "raichur", "vijayapura", "chitradurga")
-        val highViolent = listOf("bengaluru city", "mysuru dist", "mysuru city", "mandya", "kolar", "shivamogga", "bagalkot")
-        val modViolent = listOf("tumakuru", "hassan", "dharwad dist", "hubli-dharwad city", "chikkaballapura", "ramanagara")
-        tier = if (criticalViolent.any { norm.contains(it) }) "Critical" else if (highViolent.any { norm.contains(it) }) "High" else if (modViolent.any { norm.contains(it) }) "Moderate" else "Safe"
+    if (crimeFilter == "ALL") {
+        val criticalAll = listOf("mysore", "chamrajnagar", "bangalore rural", "bangalore", "dharwad", "bengaluru city", "mysuru city", "hubli-dharwad city")
+        val highAll = listOf("dakshina kannada", "belgaum", "bellary", "mangaluru city", "belagavi city", "ballari")
+        val safeAll = listOf("chikmagalur", "gadag", "udupi", "bidar", "hassan", "haveri", "kodagu", "koppal", "chikkaballapura", "ramanagara", "yadgir", "chikkamagaluru")
+        
+        tier = when {
+            criticalAll.any { norm == it || norm.contains(it) } -> "Critical"
+            highAll.any { norm == it || norm.contains(it) } -> "High"
+            safeAll.any { norm == it || norm.contains(it) } -> "Safe"
+            else -> "Moderate"
+        }
+    } else if (crimeFilter == "VIOLENT") {
+        val criticalViolent = listOf("kalaburagi dist", "kalaburagi city", "ballari", "belagavi dist", "raichur", "vijayapura", "chitradurga", "gulbarga", "bijapur", "bellary")
+        val highViolent = listOf("bengaluru city", "mysuru dist", "mysuru city", "mandya", "kolar", "shivamogga", "bagalkot", "bangalore", "mysore", "shimoga")
+        val modViolent = listOf("tumakuru", "hassan", "dharwad dist", "hubli-dharwad city", "chikkaballapura", "ramanagara", "tumkur", "dharwad")
+        
+        tier = when {
+            criticalViolent.any { norm == it || norm.contains(it) } -> "Critical"
+            highViolent.any { norm == it || norm.contains(it) } -> "High"
+            modViolent.any { norm == it || norm.contains(it) } -> "Moderate"
+            else -> "Safe"
+        }
     } else if (crimeFilter == "CYBER") {
-        val criticalCyber = listOf("bengaluru city", "mysuru city", "hubli-dharwad city", "mangaluru city")
-        val highCyber = listOf("bengaluru dist", "dakshina kannada", "udupi", "belagavi city")
-        val modCyber = listOf("tumakuru", "kolar", "mandya", "shivamogga")
-        tier = if (criticalCyber.any { norm.contains(it) }) "Critical" else if (highCyber.any { norm.contains(it) }) "High" else if (modCyber.any { norm.contains(it) }) "Moderate" else "Safe"
+        val criticalCyber = listOf("bengaluru city", "mysuru city", "hubli-dharwad city", "mangaluru city", "bangalore", "mysore", "dharwad")
+        val highCyber = listOf("bengaluru dist", "dakshina kannada", "udupi", "belagavi city", "belgaum")
+        val modCyber = listOf("tumakuru", "kolar", "mandya", "shivamogga", "tumkur", "shimoga")
+        
+        tier = when {
+            criticalCyber.any { norm == it || norm.contains(it) } -> "Critical"
+            highCyber.any { norm == it || norm.contains(it) } -> "High"
+            modCyber.any { norm == it || norm.contains(it) } -> "Moderate"
+            else -> "Safe"
+        }
     } else if (crimeFilter == "NARCOTICS") {
-        val criticalNarcotics = listOf("mangaluru city", "dakshina kannada", "udupi", "bengaluru city", "uttara kannada")
-        val highNarcotics = listOf("belagavi city", "kodagu", "mysuru city", "hubli-dharwad city")
-        val modNarcotics = listOf("shivamogga", "chikkamagaluru", "hassan", "belagavi dist")
-        tier = if (criticalNarcotics.any { norm.contains(it) }) "Critical" else if (highNarcotics.any { norm.contains(it) }) "High" else if (modNarcotics.any { norm.contains(it) }) "Moderate" else "Safe"
+        val criticalNarcotics = listOf("mangaluru city", "dakshina kannada", "udupi", "bengaluru city", "uttara kannada", "bangalore")
+        val highNarcotics = listOf("belagavi city", "kodagu", "mysuru city", "hubli-dharwad city", "belgaum", "mysore", "dharwad")
+        val modNarcotics = listOf("shivamogga", "chikkamagaluru", "hassan", "belagavi dist", "shimoga", "chikmagalur")
+        
+        tier = when {
+            criticalNarcotics.any { norm == it || norm.contains(it) } -> "Critical"
+            highNarcotics.any { norm == it || norm.contains(it) } -> "High"
+            modNarcotics.any { norm == it || norm.contains(it) } -> "Moderate"
+            else -> "Safe"
+        }
     }
 
     if (shiftFilter == "NIGHT") {
-        val isNightHotspot = norm.contains("city") || norm.contains("bengaluru") || norm.contains("mangaluru")
+        val isNightHotspot = canonicalName.contains("City") || canonicalName.contains("Bengaluru") || canonicalName.contains("Mangaluru") || norm.contains("bangalore") || norm.contains("mysore") || norm.contains("dharwad") || norm.contains("gulbarga")
         if (isNightHotspot && tier == "High") tier = "Critical"
         else if (isNightHotspot && tier == "Moderate") tier = "High"
         else if (isNightHotspot && tier == "Safe") tier = "Moderate"

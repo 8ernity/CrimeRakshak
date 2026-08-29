@@ -117,11 +117,26 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
                 
                 val pieSql = """
                     SELECT 
-                        SUM(theft) as theft, 
-                        SUM(robbery) as robbery, 
-                        SUM(burglary_day + burglary_night) as burglary, 
-                        SUM(cyber_crime) as cyber_crime, 
-                        SUM(murder) as murder 
+                        SUM(murder) as murder,
+                        SUM(attempt_to_murder) as attempt_to_murder,
+                        SUM(rape) as rape,
+                        SUM(dacoity) as dacoity,
+                        SUM(robbery) as robbery,
+                        SUM(burglary_day + burglary_night) as burglary,
+                        SUM(theft) as theft,
+                        SUM(riots) as riots,
+                        SUM(cases_of_hurt) as cases_of_hurt,
+                        SUM(cruelty_by_husband) as cruelty_by_husband,
+                        SUM(dowry_deaths) as dowry_deaths,
+                        SUM(fatal_motor_accidents) as fatal_motor_accidents,
+                        SUM(non_fatal_motor_accidents) as non_fatal_motor_accidents,
+                        SUM(molestation) as molestation,
+                        SUM(sc_st) as sc_st,
+                        SUM(gambling) as gambling,
+                        SUM(dp_act) as dp_act,
+                        SUM(cyber_crime) as cyber_crime,
+                        SUM(pocso) as pocso,
+                        SUM(pocso_rape) as pocso_rape
                     FROM district_major_heads_yearly
                 """.trimIndent()
                 
@@ -203,11 +218,26 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
                 val pieSql = if (range == "All Karnataka") {
                     """
                         SELECT 
-                            SUM(theft) as theft, 
-                            SUM(robbery) as robbery, 
-                            SUM(burglary_day + burglary_night) as burglary, 
-                            SUM(cyber_crime) as cyber_crime, 
-                            SUM(murder) as murder 
+                            SUM(murder) as murder,
+                            SUM(attempt_to_murder) as attempt_to_murder,
+                            SUM(rape) as rape,
+                            SUM(dacoity) as dacoity,
+                            SUM(robbery) as robbery,
+                            SUM(burglary_day + burglary_night) as burglary,
+                            SUM(theft) as theft,
+                            SUM(riots) as riots,
+                            SUM(cases_of_hurt) as cases_of_hurt,
+                            SUM(cruelty_by_husband) as cruelty_by_husband,
+                            SUM(dowry_deaths) as dowry_deaths,
+                            SUM(fatal_motor_accidents) as fatal_motor_accidents,
+                            SUM(non_fatal_motor_accidents) as non_fatal_motor_accidents,
+                            SUM(molestation) as molestation,
+                            SUM(sc_st) as sc_st,
+                            SUM(gambling) as gambling,
+                            SUM(dp_act) as dp_act,
+                            SUM(cyber_crime) as cyber_crime,
+                            SUM(pocso) as pocso,
+                            SUM(pocso_rape) as pocso_rape
                         FROM district_major_heads_yearly
                     """.trimIndent()
                 } else {
@@ -219,11 +249,26 @@ class OverviewViewModel(application: Application) : AndroidViewModel(application
                     }
                     """
                         SELECT 
-                            SUM(theft) as theft, 
-                            SUM(robbery) as robbery, 
-                            SUM(burglary_day + burglary_night) as burglary, 
-                            SUM(cyber_crime) as cyber_crime, 
-                            SUM(murder) as murder 
+                            SUM(murder) as murder,
+                            SUM(attempt_to_murder) as attempt_to_murder,
+                            SUM(rape) as rape,
+                            SUM(dacoity) as dacoity,
+                            SUM(robbery) as robbery,
+                            SUM(burglary_day + burglary_night) as burglary,
+                            SUM(theft) as theft,
+                            SUM(riots) as riots,
+                            SUM(cases_of_hurt) as cases_of_hurt,
+                            SUM(cruelty_by_husband) as cruelty_by_husband,
+                            SUM(dowry_deaths) as dowry_deaths,
+                            SUM(fatal_motor_accidents) as fatal_motor_accidents,
+                            SUM(non_fatal_motor_accidents) as non_fatal_motor_accidents,
+                            SUM(molestation) as molestation,
+                            SUM(sc_st) as sc_st,
+                            SUM(gambling) as gambling,
+                            SUM(dp_act) as dp_act,
+                            SUM(cyber_crime) as cyber_crime,
+                            SUM(pocso) as pocso,
+                            SUM(pocso_rape) as pocso_rape
                         FROM district_major_heads_yearly
                         WHERE $districtFilter
                     """.trimIndent()

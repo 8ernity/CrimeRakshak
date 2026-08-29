@@ -115,18 +115,25 @@ export function Header() {
               </p>
               
               <div className="bg-white p-4 rounded-xl shadow-sm mb-6 flex items-center justify-center">
-                <QRCode 
-                  value="https://crimerakshak-backend-50044347084.development.catalystappsail.in/app-release.apk" 
-                  size={200}
-                  level="H"
-                />
+                {mounted ? (
+                  <QRCode 
+                    value={`${window.location.origin}/crimerakshak.apk`} 
+                    size={200}
+                    level="H"
+                  />
+                ) : (
+                  <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground">Loading QR...</span>
+                  </div>
+                )}
               </div>
               
               <a 
-                href="https://crimerakshak-backend-50044347084.development.catalystappsail.in/app-release.apk" 
+                href="/crimerakshak.apk" 
+                download
                 className="text-brand-cyan hover:underline text-sm font-medium flex items-center gap-1.5"
               >
-                Direct Download Link
+                Download APK file
               </a>
             </div>
 

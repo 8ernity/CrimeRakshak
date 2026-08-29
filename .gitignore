@@ -62,3 +62,12 @@ zip_backend.py
 backend_deploy.zip
 backend/static/*.apk
 backend/cloudflared.exe
+backend/lib_linux/
+backend/lib_light/
+test_*/
+test_*.py
+temp_reqs.txt
+frontend/server.js
+frontend/public/crimerakshak.apk
+zip_*.py
+rebuild_frontend.ps1

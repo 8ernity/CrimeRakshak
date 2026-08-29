@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // Use the Catalyst production backend URL
-    private const val BASE_URL = "https://crimerakshak-backend-50044347084.development.catalystappsail.in/"
+    private const val BASE_URL = "https://crimerakshak-backend-6nhu.onrender.com/"
 
     var authToken: String? = null
 

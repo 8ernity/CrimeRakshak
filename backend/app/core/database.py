@@ -30,7 +30,9 @@ def _init_engine():
         logger.warning(
             f"PostgreSQL connection failed ({e}). Falling back to local SQLite database."
         )
-        sqlite_uri = "sqlite:///./crimerakshak.db"
+        import os
+        db_path = "/tmp/crimerakshak.db" if os.name != "nt" else "./crimerakshak.db"
+        sqlite_uri = f"sqlite:///{db_path}"
         eng = create_engine(sqlite_uri, connect_args={"check_same_thread": False})
         import app.models.rbac  # ensure models are loaded
         try:
