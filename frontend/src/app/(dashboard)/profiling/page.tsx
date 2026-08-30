@@ -92,9 +92,11 @@ function OffenderDetail({ o, onBack }: { o: Offender; onBack: () => void }) {
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (mounted && data) {
-          setLiveRiskScore(data.risk_score);
-          setLiveRecidivismSummary(data.criminology_summary);
-          setIsLiveScored(true);
+          if (data.risk_score !== undefined) {
+            setLiveRiskScore(data.risk_score);
+            setLiveRecidivismSummary(data.criminology_summary);
+            setIsLiveScored(true);
+          }
         }
       })
       .catch(() => {});
