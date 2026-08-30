@@ -387,6 +387,12 @@ export default function CaseIntelPage() {
       .then((data) => {
         if (!mounted || !data) return;
         
+        if (!Array.isArray(data)) {
+          console.warn("Backend returned non-array data, using local fallback cases:", data);
+          setIsLoadingList(false);
+          return;
+        }
+        
         const mapped: CaseRecord[] = data.map((f: any) => {
           const mock = cases.find(m => m.firNumber === f.fir_id);
           return {
