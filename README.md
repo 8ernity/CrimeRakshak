@@ -50,6 +50,7 @@ CrimeRakshak is an enterprise-grade crime intelligence and investigation platfor
 | 🔐 **Enterprise Auth & RBAC** | Fine-grained Role-Based Access Control (RBAC), JWT authentication with single-use refresh token rotation, account lockout, and full audit logging. |
 | 🌐 **Kannada Translation Engine** | Real-time Kannada ⇄ English neural translation for chat queries and investigative responses. |
 | 📄 **Investigative PDF Reports** | Generate exportable, audit-ready PDF conversation transcripts formatted with Unicode font rendering for Kannada script. |
+| 📱 **Mobile Companion App** | Native Android application built with Jetpack Compose for on-field officers to query case intelligence on the go. |
 
 ---
 
@@ -74,10 +75,12 @@ flowchart TB
     classDef llmStyle fill:#E11D48,stroke:#BE123C,stroke-width:2px,color:#FFFFFF
 
     subgraph ClientLayer["🖥️ CLIENT PRESENTATION LAYER"]
-        UI["Next.js 16 (App Router) + React 19<br/><i>(Dashboards · Chat AI · Force Graph · Heatmaps)</i>"]:::clientStyle
+        UI["Next.js 16 (App Router) + React 19<br/><i>(Dashboards · Chat AI · Force Graph)</i>"]:::clientStyle
+        Mobile["Android App (Kotlin + Compose)<br/><i>(On-field Copilot)</i>"]:::clientStyle
     end
 
     UI -->|HTTPS / REST API + JWT Bearer| FastAPI
+    Mobile -->|HTTPS / REST API + JWT Bearer| FastAPI
 
     subgraph BackendLayer["⚡ FASTAPI BACKEND SERVICE LAYER (Python 3.9+)"]
         FastAPI["FastAPI App Gateway & CORS Middleware"]:::apiStyle
@@ -161,6 +164,7 @@ flowchart TD
 
     subgraph Stage5["🖥️ STAGE 5: UI Presentation & Export"]
         FinalAns --> WebApp[Next.js Dashboard & Chat UI]:::stage5
+        FinalAns --> MobileApp[Android Copilot App]:::stage5
         FinalAns --> PDFGen[ReportLab PDF Engine]:::stage5
     end
 ```
@@ -223,12 +227,28 @@ flowchart LR
 | **Authentication** | Clerk (`@clerk/nextjs`) | Authentication provider integration with Next.js middleware |
 | **Icons & Animations** | Lucide React & Framer Motion | Dynamic icons and fluid UI layout transitions |
 
+### Mobile Technologies
+
+| Component | Stack | Purpose |
+|---|---|---|
+| **Framework** | Android SDK | Native Android application environment |
+| **UI Library** | Jetpack Compose | Modern declarative UI toolkit for Android |
+| **Language** | Kotlin | Primary programming language |
+| **Networking** | Retrofit | Type-safe HTTP client for API communication |
+
 ---
 
 ## 📁 Project Structure
 
 ```
 CrimeRakshak/
+├── android-app/                        # Native Android application for on-field officers
+│   ├── app/src/main/java/com/example/crimerakshak/
+│   │   ├── api/                        # Retrofit clients and API services
+│   │   ├── CopilotScreen.kt            # Mobile AI Copilot Chat UI
+│   │   └── MainActivity.kt             # Application entry point
+│   └── build.gradle.kts                # Android build configuration
+│
 ├── backend/                            # FastAPI Python backend application
 │   ├── app/
 │   │   ├── main.py                     # FastAPI entrypoint, middleware, and CORS configuration
@@ -584,24 +604,29 @@ python ingest.py
 
 ### Backend Deployment (Zoho Catalyst AppSail)
 
+Deploy using the pre-packaged `backend_deploy_final.zip`.
+
 | Parameter | Configuration |
 |---|---|
 | **Platform** | Zoho Catalyst AppSail |
-| **Runtime Environment** | Python 3.9+ |
-| **Build Command** | `pip install -r requirements.txt` |
+| **Build File** | `backend_deploy_final.zip` |
+| **Runtime Environment** | Python 3.9 |
+| **Build Command** | *(Leave empty - dependencies are bundled)* |
 | **Start Command** | `python run.py` |
 | **Port Variable** | `PORT` (Defaults to `9000`) |
 | **Health Check Endpoint** | `/health` |
 
 ### Frontend Deployment (Zoho Catalyst AppSail)
 
+Deploy using the pre-packaged Next.js standalone `frontend_deploy_v4.zip`.
+
 | Parameter | Configuration |
 |---|---|
 | **Platform** | Zoho Catalyst AppSail |
-| **Build Command** | `npm run build` |
-| **Output Directory** | `.next` |
-| **Start Command** | `npm start` |
-| **Root Directory** | `frontend/` |
+| **Build File** | `frontend_deploy_v4.zip` |
+| **Runtime Environment** | Node 20 |
+| **Build Command** | *(Leave empty - pre-built standalone)* |
+| **Start Command** | `node -e "process.env.PORT=process.env.X_ZOHO_CATALYST_LISTEN_PORT||'9000'; require('./server.js')"` |
 
 > **Note**: For live deployment on Zoho Catalyst AppSail, configure the frontend environment variable:
 > ```env
@@ -622,4 +647,5 @@ python ingest.py
 
 ## 📝 License
 
-This software and underlying crime intelligence algorithms are developed for the **Karnataka State Police (KSP)** crime analytics initiative. All rights reserved.
+Developed exclusively for the **Karnataka State Police (KSP)**. All rights reserved.
+See the [LICENSE](LICENSE) file for more details.
