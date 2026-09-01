@@ -71,3 +71,6 @@ frontend/server.js
 frontend/public/crimerakshak.apk
 zip_*.py
 rebuild_frontend.ps1
+
+# 🛠️ IDE settings 🛠️
+.vscode/
